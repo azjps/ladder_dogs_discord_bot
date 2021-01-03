@@ -36,8 +36,8 @@ async def preload_guild_data():
 @bot.event
 async def on_ready():
     bot.invite = invite_link.format(bot.user.id)
-    await database.setup()
-    bot.guild_data = await preload_guild_data()
+    # await database.setup()
+    # bot.guild_data = await preload_guild_data()
     print(
         f"""Logged in as {bot.user}..
         Serving {len(bot.users)} users in {len(bot.guilds)} guilds

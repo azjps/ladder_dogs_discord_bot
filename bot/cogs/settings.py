@@ -22,7 +22,7 @@ class Settings(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     @commands.command()
     async def prefix(self, ctx, new_prefix: str = None):
-        """*Change your servers prefix*
+        """*Change your servers command prefix (admin only)*
         **Example**: `{prefix}prefix !`
         **Requires permission**: `MANAGER SERVER`
         """
