@@ -67,6 +67,22 @@ class Puzzles(commands.Cog):
 
         await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
 
+    @commands.command(aliases=["list"])
+    async def list_puzzles(self, ctx):
+        """*List all puzzles and their statuses*"""
+        all_puzzles = PuzzleJsonDb.get_all()
+        # TODO: this is very primitive
+        message = ""
+        for puzzle in all_puzzles:
+            message += f"{puzzle.round_name} {puzzle.channel_mention} {puzzle.puzzle_type} {puzzle.status}\n"
+
+        embed = discord.Embed()
+        embed.add_field(
+            name="Puzzles",
+            value=message,
+        )
+        await ctx.send(embed=embed)
+
     async def get_or_create_channel(
         self, guild, category: discord.CategoryChannel, channel_name: str, channel_type, **kwargs
     ):
@@ -256,6 +272,7 @@ want to do most of the puzzle work itself on Google Sheets / Docs.
             return
 
         solution = arg.strip().upper()
+        puzzle_data.status = "solved"
         puzzle_data.solution = solution
         puzzle_data.solve_time = datetime.datetime.now(tz=pytz.UTC)
         PuzzleJsonDb.commit(puzzle_data)
@@ -279,7 +296,7 @@ want to do most of the puzzle work itself on Google Sheets / Docs.
         channel = ctx.channel
         category = channel.category
 
-        # TODO(azhu): need to confirm deletion first!
+        # TODO: need to confirm deletion first!
 
         PuzzleJsonDb.delete(puzzle_data)
         voice_channel = discord.utils.get(

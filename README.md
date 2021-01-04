@@ -26,12 +26,14 @@ Create a [discord application, bot](https://realpython.com/how-to-make-a-discord
   "prefix": "!",
   "database": "postgresql://postgres:postgres@localhost:5432/postgres"
 }
-``` (The database URI can be omitted.)
-
-Now you can run the bot by calling:
 ```
+(The database URI can be omitted.)
+
+Now you can run the bot by running the following in a shell:
+```bash
 # Setup python environment
-pipenv install
+pip install pipenv
+pipenv install  # creates a new virtualenv
 pipenv shell
 # Start bot
 python run.py

@@ -60,15 +60,16 @@ class _PuzzleJsonDb:
         except IOError:
             pass
 
-    def get(self, puzzle_name, round_name):
+    def get(self, puzzle_name, round_name) -> PuzzleData:
         try:
             with self.puzzle_path(puzzle_name, round_name=round_name).open() as fp:
                 return PuzzleData.from_json(fp.read())
         except IOError as exc:
             if exc.errno == errno.EEXIST:
                 raise MissingPuzzleError(f"Unable to find puzzle {puzzle_name} for {round_name}")
+            raise
 
-    def get_all(self):
+    def get_all(self) -> list[PuzzleData]:
         paths = self.dir_path.rglob("*/*.json")
         puzzle_datas = []
         for path in paths:
@@ -77,7 +78,7 @@ class _PuzzleJsonDb:
                     puzzle_datas.append(PuzzleData.from_json(fp.read()))
             except Exception as exc:
                 # TODO(azhu): use logging
-                print("Unable to load puzzle data from {path}: {exc}")
+                print(f"Unable to load puzzle data from {path}: {exc}")
         return puzzle_datas
 
 
