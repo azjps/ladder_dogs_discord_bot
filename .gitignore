@@ -134,3 +134,4 @@ dmypy.json
 
 # TEMPLATE END
 config.json
+data/*

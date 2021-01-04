@@ -1,13 +1,18 @@
-from pathlib import Path
+import datetime
+from typing import Optional
 
 import discord
 from discord.ext import commands
+import pytz
+
+from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
 
 
 class Puzzles(commands.Cog):
     META_CHANNEL_NAME = "meta"
     META_REASON = "bot-meta"
     PUZZLE_REASON = "bot-puzzle"
+    DELETE_REASON = "bot-delete"
 
     def __init__(self, bot):
         self.bot = bot
@@ -96,6 +101,16 @@ class Puzzles(commands.Cog):
             guild=guild, category=category, channel_name=channel_name, channel_type="text", reason=self.PUZZLE_REASON
         )
         if created_text:
+            puzzle_data = PuzzleData(
+                name=channel_name,
+                round_name=category_name,
+                guild_name=guild.name,
+                guild_id=guild.id,
+                channel_mention=text_channel.mention,
+                channel_id=text_channel.id,
+                start_time=datetime.datetime.now(tz=pytz.UTC),
+            )
+            PuzzleJsonDb.commit(puzzle_data)
             await self.send_initial_puzzle_channel_messages(text_channel)
 
         voice_channel, created_voice = await self.get_or_create_channel(
@@ -121,17 +136,16 @@ class Puzzles(commands.Cog):
             name="Overview",
             value="""This channel and the corresponding voice channel 
 are goods places to discuss how to tackle this puzzle. Usually you'll
-want to do most of the puzzle work on Google Sheets / Docs.
+want to do most of the puzzle work itself on Google Sheets / Docs.
 """,
             inline=False,
         )
         embed.add_field(
             name="Commands",
             value="""The following may be useful discord commands:
-
 • `!solve SOLUTION` will mark this puzzle as solved and archive this channel to #solved-puzzles
-• `!link` will show the puzzle's link on the hunt website, and `!link <url>` will update the link
-• `!doc` will show Google Sheet link, and `!doc <url>` will update the link
+• `!link <url>` will update the link to the puzzle on the hunt website
+• `!doc <url>` will update the Google Drive link
 * `!res` or `!resources` will show links to some useful puzzling resources
 * `!info` will re-post this message
 • `!delete` should *only* be used if a channel was mistakenly created.
@@ -145,65 +159,145 @@ want to do most of the puzzle work on Google Sheets / Docs.
     async def send_not_puzzle_channel(self, ctx):
         await ctx.send("This does not appear to be a puzzle channel")
 
-    def check_if_puzzle_channel(self, ctx):
-        return True
+    def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
+        if not channel.category:
+            return None
+
+        round_name = channel.category.name
+        puzzle_name = channel.name
+        try:
+            return PuzzleJsonDb.get(puzzle_name, round_name)
+        except MissingPuzzleError:
+            return None
 
     @commands.command()
     async def info(self, ctx):
-        if not self.check_if_puzzle_channel(ctx):
-            await self.send_not_puzzle_channel(ctx.channel)
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
             return
 
         await self.send_initial_puzzle_channel_messages(ctx.channel)
 
-    @commands.command()
-    async def link(self, ctx):
-        if not self.check_if_puzzle_channel(ctx):
+    async def update_puzzle_attr_by_command(self, ctx, attr, value, message=None, reply=True):
+        """Common pattern where we want to update a single field in PuzzleData based on command"""
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
             return
 
-        embed = discord.Embed(
-            description=f"""Puzzle Hunt link: """
-        )
-        await ctx.send(embed=embed)
+        message = message or attr
+        if value:
+            setattr(puzzle_data, attr, value)
+            PuzzleJsonDb.commit(puzzle_data)
+            message = "Updated! " + message
+
+        if reply:
+            embed = discord.Embed(description=f"""{message}: {getattr(puzzle_data, attr)}""")
+            await ctx.send(embed=embed)
+        return puzzle_data
+
+    async def send_state(self, channel: discord.TextChannel, puzzle_data: PuzzleData, description=None):
+        """Send simple embed showing relevant links"""
+        embed = discord.Embed(description=description)
+        embed.add_field(name="Hunt URL", value=puzzle_data.hunt_url or "?")
+        embed.add_field(name="Google Drive", value=puzzle_data.google_docs_url or "?")
+        embed.add_field(name="Status", value=puzzle_data.status or "?")
+        embed.add_field(name="Type", value=puzzle_data.puzzle_type or "?")
+        await channel.send(embed=embed)
+
+    @commands.command()
+    async def link(self, ctx, *, url: Optional[str]):
+        puzzle_data = await self.update_puzzle_attr_by_command(ctx, "hunt_url", url, reply=False)
+        if puzzle_data:
+            await self.send_state(
+                ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
+            )
 
     @commands.command(aliases=["sheet"])
-    async def doc(self, ctx):
-        if not self.check_if_puzzle_channel(ctx):
-            await self.send_not_puzzle_channel(ctx)
-            return
+    async def doc(self, ctx, *, url: Optional[str]):
+        puzzle_data = await self.update_puzzle_attr_by_command(ctx, "google_docs_url", url, reply=False)
+        if puzzle_data:
+            await self.send_state(
+                ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
+            )
 
-        embed = discord.Embed(
-            description=f"""Google Drive link: """
-        )
-        await ctx.send(embed=embed)
+    @commands.command()
+    async def status(self, ctx, *, status: Optional[str]):
+        puzzle_data = await self.update_puzzle_attr_by_command(ctx, "status", status, reply=False)
+        if puzzle_data:
+            await self.send_state(
+                ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if status else None
+            )
+
+    @commands.command()
+    async def type(self, ctx, *, puzzle_type: Optional[str]):
+        await self.update_puzzle_attr_by_command(ctx, "puzzle_type", puzzle_type, reply=False)
+        if puzzle_data:
+            await self.send_state(
+                ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if puzzle_type else None
+            )
 
     @commands.command(aliases=["res"])
     async def resources(self, ctx):
-        if not self.check_if_puzzle_channel(ctx):
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
             return
 
-        embed = discord.Embed(
-            description=f"""Resources: """
-        )
+        embed = discord.Embed(description=f"""Resources: """)
         await ctx.send(embed=embed)
 
     @commands.command()
     async def solve(self, ctx, *, arg):
-        if not self.check_if_puzzle_channel(ctx):
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
             return
 
         solution = arg.strip().upper()
+        puzzle_data.solution = solution
+        puzzle_data.solve_time = datetime.datetime.now(tz=pytz.UTC)
+        PuzzleJsonDb.commit(puzzle_data)
+
         embed = discord.Embed(
-            description=f"""Solved! Marked the solution as `{solution}`"""
+            description=f""":ladder: :dog: :partying_face: Great work! Marked the solution as `{solution}`"""
         )
         await ctx.send(embed=embed)
 
-class _PuzzleJsonDb:
-    def __init__(self, dir_path: Path):
-        self.dir_path = dir_path
+    @commands.command()
+    async def delete(self, ctx):
+        """Permanently delete a channel"""
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
+            return
+
+        if puzzle_data.solution:
+            raise ValueError("Unable to delete a solved puzzle channel, please contact discord admins if needed")
+
+        channel = ctx.channel
+        category = channel.category
+
+        # TODO(azhu): need to confirm deletion first!
+
+        PuzzleJsonDb.delete(puzzle_data)
+        voice_channel = discord.utils.get(
+            ctx.guild.channels, category=category, type=discord.ChannelType.voice, name=channel.name
+        )
+        if voice_channel:
+            await voice_channel.delete(reason=self.DELETE_REASON)
+        # delete text channel last so that errors can be reported
+        await ctx.channel.delete(reason=self.DELETE_REASON)
+
+    @commands.command()
+    async def debug_puzzle_channel(self, ctx):
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
+            return
+
+        await ctx.channel.send(f"```json\n{puzzle_data.to_json()}```")
 
 def setup(bot):
     bot.add_cog(Puzzles(bot))

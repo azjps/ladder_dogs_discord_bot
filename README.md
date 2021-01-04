@@ -7,6 +7,12 @@ Currently for simplicity, I am not using a postgres DB, just storing some simple
 
 TODO
 
+# Todos
+
+* `!list`
+* Google Drive API
+* Some simple logging
+
 # Setup
 
 Clone this repository
@@ -16,11 +22,11 @@ git clone https://github.com/azjps/ladder_dogs_discord_bot
 Create a [discord application, bot](https://realpython.com/how-to-make-a-discord-bot-python/), and add the bot's token to a [`config.json` file](https://github.com/makupi/cookiecutter-discord.py-postgres/blob/master/%7B%7Bcookiecutter.bot_slug%7D%7D/config.json) in the root directory of this project:
 ```json
 {
-  "token": "{{cookiecutter.token}}",
+  "token": "{{discord_bot_token}}",
   "prefix": "!",
   "database": "postgresql://postgres:postgres@localhost:5432/postgres"
 }
-```
+``` (The database URI can be omitted.)
 
 Now you can run the bot by calling:
 ```
