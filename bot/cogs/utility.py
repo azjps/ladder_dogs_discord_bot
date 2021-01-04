@@ -50,9 +50,9 @@ class Utility(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def info(self, ctx):
+    async def info_bot(self, ctx):
         """*Shows stats and infos about the bot*
-        **Example**: `{prefix}info`"""
+        **Example**: `{prefix}info_bot`"""
         embed = discord.Embed(title="Ladder Dogs Mystery Hunt Bot")
         # embed.url = f"https://top.gg/bot/{self.bot.user.id}"
         embed.set_thumbnail(url=self.bot.user.avatar_url)
