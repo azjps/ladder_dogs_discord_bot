@@ -150,10 +150,9 @@ class Puzzles(commands.Cog):
         )
         embed.add_field(
             name="Overview",
-            value="""This channel and the corresponding voice channel 
-are goods places to discuss how to tackle this puzzle. Usually you'll
-want to do most of the puzzle work itself on Google Sheets / Docs.
-""",
+            value="This channel and the corresponding voice channel "
+            "are goods places to discuss how to tackle this puzzle. Usually you'll "
+            "want to do most of the puzzle work itself on Google Sheets / Docs.",
             inline=False,
         )
         embed.add_field(
@@ -278,7 +277,26 @@ want to do most of the puzzle work itself on Google Sheets / Docs.
         PuzzleJsonDb.commit(puzzle_data)
 
         embed = discord.Embed(
-            description=f""":ladder: :dog: :partying_face: Great work! Marked the solution as `{solution}`"""
+            description=f":ladder: :dog: :partying_face: Great work! Marked the solution as `{solution}`"
+        )
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def unsolve(self, ctx, *):
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
+            return
+
+        prev_solution = puzzle_data.solution
+        puzzle_data.status = "unsolved"
+        puzzle_data.solution = ""
+        puzzle_data.solve_time = None
+        PuzzleJsonDb.commit(puzzle_data)
+
+        embed = discord.Embed(
+            description=f":ladder: :dog: Alright, I've unmarked {prev_solution} as the solution.` "
+            "You'll get'em next time!"
         )
         await ctx.send(embed=embed)
 
@@ -315,6 +333,18 @@ want to do most of the puzzle work itself on Google Sheets / Docs.
             return
 
         await ctx.channel.send(f"```json\n{puzzle_data.to_json()}```")
+
+    async def archive_solved_puzzles(self, guild):
+        """TODO: have this as an event task:
+        https://discordpy.readthedocs.io/en/latest/ext/tasks/
+        """
+        puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive()
+        # need to stash guild as a botvar:
+        # https://stackoverflow.com/questions/64676968/how-to-use-context-within-discord-ext-tasks-loop-in-discord-py
+        # channel = .get(channel)
+        # solved_category = .get(name="solved-puzzles")
+        # channel.edit(category=)
+        # PuzzleJsonDb.commit()
 
 def setup(bot):
     bot.add_cog(Puzzles(bot))

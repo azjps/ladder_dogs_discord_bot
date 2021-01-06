@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Optional
 
+import pytz
+
 class MissingPuzzleError(RuntimeError):
     pass
 
@@ -26,9 +28,9 @@ class PuzzleData:
     status: str = ""
     solution: str = ""
     puzzle_type: str = ""
-    solution: str = ""
     start_time: Optional[datetime.datetime] = None
     solve_time: Optional[datetime.datetime] = None
+    archive_time: Optional[datetime.datetime] = None
 
 
 class _PuzzleJsonDb:
@@ -81,5 +83,20 @@ class _PuzzleJsonDb:
                 print(f"Unable to load puzzle data from {path}: {exc}")
         return puzzle_datas
 
+    def get_solved_puzzles_to_archive(self, now=None) -> list[PuzzleData]:
+        all_puzzles = self.get_all()
+        now = now or datetime.datetime.now(tz=pytz.UTC)
+        puzzles_to_archive = []
+        for puzzle in all_puzzles:
+            if puzzle.archive_time is not None:
+                # already archived
+                continue
+            if puzzle.status == "solved" and puzzle.solve_time is not None:
+                # found a solved puzzle
+                if now - puzzle.solve_time > datetime.timedelta(minutes=5):
+                    # enough time has passed, archive the channel
+                    puzzles_to_archive.append(puzzle)
+        return puzzles_to_archive
+        
 
 PuzzleJsonDb = _PuzzleJsonDb(dir_path=Path(__file__).parent.parent.parent / "data")

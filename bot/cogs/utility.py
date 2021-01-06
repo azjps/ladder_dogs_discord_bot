@@ -53,7 +53,7 @@ class Utility(commands.Cog):
     async def info_bot(self, ctx):
         """*Shows stats and infos about the bot*
         **Example**: `{prefix}info_bot`"""
-        embed = discord.Embed(title="Ladder Dogs Mystery Hunt Bot")
+        embed = discord.Embed(title="LadderSpot")
         # embed.url = f"https://top.gg/bot/{self.bot.user.id}"
         embed.set_thumbnail(url=self.bot.user.avatar_url)
         embed.add_field(
@@ -75,7 +75,7 @@ class Utility(commands.Cog):
         embed.add_field(
             name="Software Versions",
             value=f"```py\n"
-            f"Ladder Dogs Mystery Hunt Bot: {self.bot.version}\n"
+            f"LadderSpot: {self.bot.version}\n"
             f"discord.py: {discord.__version__}\n"
             f"Python: {PY_VERSION}```",
             inline=False,
@@ -85,7 +85,7 @@ class Utility(commands.Cog):
             value=f"[Invite]({self.bot.invite})",
             inline=False,
         )
-        embed.set_footer(text="Thank you for using Ladder Dogs Mystery Hunt Bot <3", icon_url=self.bot.user.avatar_url)
+        embed.set_footer(text=":ladder: :dog:", icon_url=self.bot.user.avatar_url)
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["socials", "links", "support"])
