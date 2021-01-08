@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import random
 from pathlib import Path
 
@@ -38,12 +39,24 @@ async def on_ready():
     bot.invite = invite_link.format(bot.user.id)
     # await database.setup()
     # bot.guild_data = await preload_guild_data()
+    guild_names = [g.name for g in bot.guilds]
+    guild_ids = [g.id for g in bot.guilds]
+    
     print(
         f"""Logged in as {bot.user}..
-        Serving {len(bot.users)} users in {len(bot.guilds)} guilds
+        Serving {len(bot.users)} users in {len(bot.guilds)} guilds: {guild_names} {guild_ids}
         Invite: {invite_link.format(bot.user.id)}
     """
     )
+
+
+def setup_logger():
+    # Set up basic logging as per https://discordpy.readthedocs.io/en/latest/logging.html#logging-setup
+    logger = logging.getLogger('discord')
+    logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    logger.addHandler(handler)
 
 
 def extensions():
@@ -61,5 +74,6 @@ def load_extensions(_bot):
 
 
 def run():
+    setup_logger()
     load_extensions(bot)
     bot.run(utils.config.token)

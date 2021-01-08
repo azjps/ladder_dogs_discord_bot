@@ -95,7 +95,7 @@ class Utility(commands.Cog):
         **Example**: `{prefix}invite`"""
         embed = discord.Embed()
         embed.description = f"[Invite]({self.bot.invite})"
-        embed.set_footer(text="Thank you for using Ladder Dogs Mystery Hunt Bot <3", icon_url=self.bot.user.avatar_url)
+        embed.set_footer(text=":ladder: :dog:", icon_url=self.bot.user.avatar_url)
         await ctx.send(embed=embed)
 
 

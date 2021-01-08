@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Optional
 
 import discord
@@ -6,6 +7,8 @@ from discord.ext import commands
 import pytz
 
 from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
+
+logger = logging.getLogger(__name__)
 
 
 class Puzzles(commands.Cog):
@@ -63,14 +66,14 @@ class Puzzles(commands.Cog):
         category = discord.utils.get(guild.categories, name=category_name)
         if not category:
             print(f"Creating a new channel category for round: {category_name}")
-            category = await guild.create_category(category_name)
+            category = await guild.create_category(category_name, position=len(guild.categories) - 1)
 
         await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
 
     @commands.command(aliases=["list"])
     async def list_puzzles(self, ctx):
         """*List all puzzles and their statuses*"""
-        all_puzzles = PuzzleJsonDb.get_all()
+        all_puzzles = PuzzleJsonDb.get_all(ctx.guild.id)
         # TODO: this is very primitive
         message = ""
         for puzzle in all_puzzles:
@@ -96,7 +99,9 @@ class Puzzles(commands.Cog):
         channel = discord.utils.get(guild.channels, category=category, type=channel_type, name=channel_name)
         created = False
         if not channel:
-            print(f"Creating a new channel: {channel_name} for category: {category}")
+            message = f"Creating a new channel: {channel_name} of type {channel_type} for category: {category}"
+            print(message)
+            logger.info(message)
             create_method = (
                 guild.create_text_channel if channel_type is discord.ChannelType.text else guild.create_voice_channel
             )
@@ -178,10 +183,11 @@ class Puzzles(commands.Cog):
         if not channel.category:
             return None
 
+        guild_id = channel.guild.id
         round_name = channel.category.name
         puzzle_name = channel.name
         try:
-            return PuzzleJsonDb.get(puzzle_name, round_name)
+            return PuzzleJsonDb.get(guild_id, puzzle_name, round_name)
         except MissingPuzzleError:
             return None
 
@@ -279,10 +285,16 @@ class Puzzles(commands.Cog):
         embed = discord.Embed(
             description=f":ladder: :dog: :partying_face: Great work! Marked the solution as `{solution}`"
         )
+        embed.add_field(
+            name="Follow-up",
+            value="If the solution was mistakenly entered, please message `!unsolve`. "
+            "Otherwise, I will automatically archive this puzzle channel to #solved-puzzles "
+            "in 5 minutes.",
+        )
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def unsolve(self, ctx, *):
+    async def unsolve(self, ctx):
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
@@ -295,7 +307,7 @@ class Puzzles(commands.Cog):
         PuzzleJsonDb.commit(puzzle_data)
 
         embed = discord.Embed(
-            description=f":ladder: :dog: Alright, I've unmarked {prev_solution} as the solution.` "
+            description=f":ladder: :dog: Alright, I've unmarked {prev_solution} as the solution. "
             "You'll get'em next time!"
         )
         await ctx.send(embed=embed)
@@ -338,13 +350,48 @@ class Puzzles(commands.Cog):
         """TODO: have this as an event task:
         https://discordpy.readthedocs.io/en/latest/ext/tasks/
         """
-        puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive()
+        puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive(guild.id)
         # need to stash guild as a botvar:
         # https://stackoverflow.com/questions/64676968/how-to-use-context-within-discord-ext-tasks-loop-in-discord-py
         # channel = .get(channel)
-        # solved_category = .get(name="solved-puzzles")
-        # channel.edit(category=)
-        # PuzzleJsonDb.commit()
+        # TODO: read this from config?
+        solved_category_name = "SOLVED PUZZLES"
+        solved_category = discord.utils.get(guild.categories, name=solved_category_name)
+        if not solved_category:
+            avail_categories = [c.name for c in guild.categories]
+            raise ValueError(
+                f"{solved_category_name} category does not exist; available categories: {avail_categories}"
+            )
+        
+        for puzzle in puzzles_to_archive:
+            channel = discord.utils.get(
+                guild.channels, type=discord.ChannelType.text, id=puzzle.channel_id
+            )
+            if channel:
+                await channel.edit(category=solved_category)
+
+            voice_channel = discord.utils.get(
+                guild.channels, type=discord.ChannelType.voice, name=puzzle.name
+            )
+            if voice_channel:
+                await voice_channel.delete()
+
+            puzzle.archive_time = datetime.datetime.now(tz=pytz.UTC)
+            puzzle.archive_channel_mention = channel.mention
+            PuzzleJsonDb.commit(puzzle)
+        return puzzles_to_archive
+
+    @commands.command()
+    async def archive_solved(self, ctx):
+        """Archive solved puzzles
+        
+        Done automatically on task loop, so this is only useful for debugging
+        """
+        puzzles_to_archive = await self.archive_solved_puzzles(ctx.guild)
+        mentions = " ".join([p.channel_mention for p in puzzles_to_archive])
+        message = f"Archived {len(puzzles_to_archive)} solved puzzle channels: {mentions}"
+        logger.info(message)
+        await ctx.send(message)
 
 def setup(bot):
     bot.add_cog(Puzzles(bot))

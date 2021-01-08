@@ -5,6 +5,15 @@ To keep things very simple, currently this is not using a postgres DB, and is ju
 
 # Usage
 
+Most users will just need to become familiar with two commands:
+1. To post a new puzzle channel, post `!p puzzle-name` in the `#meta` channel of the corresponding puzzle round.
+   This will create a new text and voice channel where puzzle discussion can take place.
+   You can scroll the sidebar or use `Ctrl + K` to help search for existing puzzle channels. 
+2. When Hunt HQ has confirmed that the puzzle has been solved, post `!solve SOLUTION` in the puzzle channel.
+   The channels will be automatically archived afterwards.
+
+----
+
 For a new round/world of puzzles, first start by posting `!round` in the `#bot` channel:
 ```
 !r puzzle-round-name
