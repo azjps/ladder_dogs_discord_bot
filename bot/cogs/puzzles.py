@@ -66,7 +66,8 @@ class Puzzles(commands.Cog):
         category = discord.utils.get(guild.categories, name=category_name)
         if not category:
             print(f"Creating a new channel category for round: {category_name}")
-            category = await guild.create_category(category_name, position=len(guild.categories) - 1)
+            # TODO: debug position?
+            category = await guild.create_category(category_name, position=len(guild.categories) - 2)
 
         await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
 
@@ -346,7 +347,7 @@ class Puzzles(commands.Cog):
 
         await ctx.channel.send(f"```json\n{puzzle_data.to_json()}```")
 
-    async def archive_solved_puzzles(self, guild):
+    async def archive_solved_puzzles(self, guild: discord.Guild) -> list[PuzzleData]:
         """TODO: have this as an event task:
         https://discordpy.readthedocs.io/en/latest/ext/tasks/
         """

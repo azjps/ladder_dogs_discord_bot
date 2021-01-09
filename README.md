@@ -36,8 +36,8 @@ this can be undone by posting `!unsolve`.
 # Todos
 
 * Google Drive API
-* Archiving solved puzzles
-* Some simple logging
+* Configuring a single channel to listen for bot commands
+* Task event loop for archiving solved puzzles
 
 # Setup
 
