@@ -1,7 +1,8 @@
 # Discord Bot for Ladder Dogs
 Discord bot which manages puzzle channels for puzzle hunts via discord commands.
-Initially created from [cookiecutter-discord.py-postgres](https://github.com/makupi/cookiecutter-discord.py-postgres).
-To keep things very simple, currently this is not using a postgres DB, and is just storing some simple puzzle metadata via JSON files.
+This was initially created from [`cookiecutter-discord.py-postgres`](https://github.com/makupi/cookiecutter-discord.py-postgres) and uses [`gspread_asyncio`](https://gspread-asyncio.readthedocs.io/en/latest/index.html) for (optional) Google Drive integration.
+
+To keep things very simple (and because I started this a week before Hunt starts), currently this is not using a postgres DB, and is just storing some simple puzzle metadata via JSON files. If this bot works well enough, likely will switch to postgres/gino/alembic for next time.
 
 # Usage
 
@@ -35,9 +36,9 @@ this can be undone by posting `!unsolve`.
 
 # Todos
 
-* Google Drive API
+* Create Google Spreadsheet on new puzzle and guess link on hunt website
 * Configuring a single channel to listen for bot commands
-* Task event loop for archiving solved puzzles
+* Task event loop for archiving solved puzzles, updating nexus sheet
 
 # Setup
 
@@ -55,9 +56,12 @@ Create a [discord application, bot](https://realpython.com/how-to-make-a-discord
 ```
 (The database URI can be omitted.)
 
+For the Google Drive integration (optional), create a [Google service account (for example see these instructions from `gspread`)](
+https://gspread.readthedocs.io/en/latest/oauth2.html#enable-api-access), and save the service account key JSON file as `google_secrets.json`.
+
 Now you can run the bot by running the following in a shell:
 ```bash
-# Setup python environment
+# Setup python3 environment
 pip install pipenv
 pipenv install  # creates a new virtualenv
 pipenv shell
