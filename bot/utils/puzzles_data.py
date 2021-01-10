@@ -9,6 +9,8 @@ from typing import Optional
 
 import pytz
 
+from bot.utils.puzzle_settings import DATA_DIR
+
 logger = logging.getLogger(__name__)
 
 
@@ -109,4 +111,4 @@ class _PuzzleJsonDb:
         return puzzles_to_archive
         
 
-PuzzleJsonDb = _PuzzleJsonDb(dir_path=Path(__file__).parent.parent.parent / "data")
+PuzzleJsonDb = _PuzzleJsonDb(dir_path=DATA_DIR)

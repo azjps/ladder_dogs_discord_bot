@@ -135,6 +135,8 @@ class Puzzles(commands.Cog):
             PuzzleJsonDb.commit(puzzle_data)
             await self.send_initial_puzzle_channel_messages(text_channel)
 
+            # await self.create_puzzle_spreadsheet(text_channel, name=name, round_name=round_name)
+
         voice_channel, created_voice = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=channel_name, channel_type="voice", reason=self.PUZZLE_REASON
         )

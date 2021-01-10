@@ -39,6 +39,10 @@ def get_credentials(scopes: Optional[list] = None) -> Credentials:
     return scoped
 
 
+def get_manager() -> gspread_asyncio.AsyncioGspreadClientManager:
+    return gspread_asyncio.AsyncioGspreadClientManager(get_credentials)
+
+
 def spreadsheet_link(sheet_id: str):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}"
 
@@ -58,7 +62,8 @@ async def create_spreadsheet(
         """
     agc = await agcm.authorize()
 
-    # Re-implmented from gspread_asyncio for folder_id
+    # Re-implmented from gspread_asyncio for folder_id.
+    # NOTE: now merged in https://github.com/dgilman/gspread_asyncio/pull/30
     ss = await agc.agcm._call(agc.gc.create, title, folder_id=folder_id)
     sheet = gspread_asyncio.AsyncioGspreadSpreadsheet(agc.agcm, ss)
     agc._ss_cache_title[title] = sheet

@@ -1,6 +1,6 @@
 # Discord Bot for Ladder Dogs
 Discord bot which manages puzzle channels for puzzle hunts via discord commands.
-This was initially created from [`cookiecutter-discord.py-postgres`](https://github.com/makupi/cookiecutter-discord.py-postgres) and uses [`gspread_asyncio`](https://gspread-asyncio.readthedocs.io/en/latest/index.html) for (optional) Google Drive integration.
+This was initially created from [`cookiecutter-discord.py-postgres`](https://github.com/makupi/cookiecutter-discord.py-postgres) and uses [`aiogoogle`](https://aiogoogle.readthedocs.io/en/latest/)/[`gspread_asyncio`](https://gspread-asyncio.readthedocs.io/en/latest/index.html) for (optional) Google Drive integration.
 
 To keep things very simple (and because I started this a week before Hunt starts), currently this is not using a postgres DB, and is just storing some simple puzzle metadata via JSON files. If this bot works well enough, likely will switch to postgres/gino/alembic for next time.
 
