@@ -302,8 +302,8 @@ class Puzzles(commands.Cog):
         embed.add_field(
             name="Follow-up",
             value="If the solution was mistakenly entered, please message `!unsolve`. "
-            "Otherwise, I will automatically archive this puzzle channel to #solved-puzzles "
-            "and archive the Spreadsheet in around 5 minutes.",
+            "Otherwise, in around 5 minutes, I will automatically archive this "
+            "puzzle channel to #solved-puzzles and archive the Google Spreadsheet",
         )
         await ctx.send(embed=embed)
 

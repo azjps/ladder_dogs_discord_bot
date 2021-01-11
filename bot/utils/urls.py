@@ -11,7 +11,7 @@ def drive_folder_url(folder_id: str) -> str:
     return f"https://drive.google.com/drive/u/0/folders/{folder_id}"
 
 def extract_id_from_url(url: str) -> Optional[str]:
-    m = re.match(REGEX_DRIVE_URL, url):
+    m = re.match(REGEX_DRIVE_URL, url)
     if m:
         return m["id"]
     m = re.match(REGEX_DRIVE_ID, url)
