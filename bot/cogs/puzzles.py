@@ -3,11 +3,12 @@ import logging
 from typing import Optional
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import pytz
 
 from bot.utils import urls
 from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
+from bot.utils.puzzle_settings import GuildSettingsDb
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class Puzzles(commands.Cog):
     META_REASON = "bot-meta"
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
+    SOLVED_PUZZLES_CATEGORY = "SOLVED PUZZLES"
 
     def __init__(self, bot):
         self.bot = bot
@@ -71,6 +73,27 @@ class Puzzles(commands.Cog):
             category = await guild.create_category(category_name, position=len(guild.categories) - 2)
 
         await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
+
+    @commands.command()
+    @commands.has_permissions(manage_channels=True)
+    async def show_settings(self, ctx):
+        guild_id = ctx.guild.id
+        settings = GuildSettingsDb.get(guild_id)
+        await ctx.channel.send(f"```json\n{settings.to_json()}```")
+
+    @commands.command()
+    @commands.has_permissions(manage_channels=True)
+    async def update_setting(self, ctx, setting_key: str, setting_value: str):
+        """Update guild setting: !update_setting key value"""
+        guild_id = ctx.guild.id
+        settings = GuildSettingsDb.get(guild_id)
+        if hasattr(settings, setting_key):
+            old_value = getattr(settings, setting_key)
+            setattr(settings, setting_key, setting_value)
+            GuildSettingsDb.commit(settings)
+            await ctx.send(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}`")
+        else:
+            await ctx.send(f":exclamation: Unrecognized setting key: `{setting_key}`. Use `!show_settings` for more info.")
 
     @commands.command(aliases=["list"])
     async def list_puzzles(self, ctx):
@@ -133,6 +156,13 @@ class Puzzles(commands.Cog):
                 channel_id=text_channel.id,
                 start_time=datetime.datetime.now(tz=pytz.UTC),
             )
+            settings = GuildSettingsDb.get_cached(guild.id)
+            if settings.hunt_url:
+                # This is based on last year's URLs, where the URL format was
+                # https://<site>/puzzle/puzzle_name
+                hunt_url_base = settings.hunt_url.rstrip("/")
+                hunt_name = channel_name.replace("-", "_")
+                puzzle_data.hunt_url = f"{hunt_url_base}/{channel_name}"
             PuzzleJsonDb.commit(puzzle_data)
             await self.send_initial_puzzle_channel_messages(text_channel)
 
@@ -177,6 +207,7 @@ class Puzzles(commands.Cog):
 * `!info` will re-post this message
 • `!delete` should *only* be used if a channel was mistakenly created.
 • `!type crossword` will mark the type of the puzzle, for others to know
+• `!priority high` will mark the priority of the puzzle, for others to know
 • `!status extracting` will update the status of the puzzle, for others to know
 """,
             inline=False,
@@ -184,7 +215,10 @@ class Puzzles(commands.Cog):
         await channel.send(embed=embed)
 
     async def send_not_puzzle_channel(self, ctx):
-        await ctx.send("This does not appear to be a puzzle channel")
+        if ctx.channel and ctx.channel.category.name == self.SOLVED_PUZZLES_CATEGORY:
+            await ctx.send("This puzzle appears to already be solved")
+        else:    
+            await ctx.send("This does not appear to be a puzzle channel")
 
     def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
         if not channel.category:
@@ -233,6 +267,7 @@ class Puzzles(commands.Cog):
         embed.add_field(name="Google Drive", value=spreadsheet_url)
         embed.add_field(name="Status", value=puzzle_data.status or "?")
         embed.add_field(name="Type", value=puzzle_data.puzzle_type or "?")
+        embed.add_field(name="Priority", value=puzzle_data.priority or "?")
         await channel.send(embed=embed)
 
     @commands.command()
@@ -271,6 +306,14 @@ class Puzzles(commands.Cog):
         if puzzle_data:
             await self.send_state(
                 ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if puzzle_type else None
+            )
+
+    @commands.command()
+    async def priority(self, ctx, *, priority: Optional[str]):
+        await self.update_puzzle_attr_by_command(ctx, "priority", priority, reply=False)
+        if puzzle_data:
+            await self.send_state(
+                ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if priority else None
             )
 
     @commands.command(aliases=["res"])
@@ -362,15 +405,17 @@ class Puzzles(commands.Cog):
         await ctx.channel.send(f"```json\n{puzzle_data.to_json()}```")
 
     async def archive_solved_puzzles(self, guild: discord.Guild) -> list[PuzzleData]:
-        """TODO: have this as an event task:
-        https://discordpy.readthedocs.io/en/latest/ext/tasks/
+        """Archive puzzles for which sufficient time has elapsed since solve time
+
+        Move them to a solved-puzzles channel category, and rename spreadsheet
+        to start with the text [SOLVED]
         """
         puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive(guild.id)
         # need to stash guild as a botvar:
         # https://stackoverflow.com/questions/64676968/how-to-use-context-within-discord-ext-tasks-loop-in-discord-py
         # channel = .get(channel)
         # TODO: read this from config?
-        solved_category_name = "SOLVED PUZZLES"
+        solved_category_name = self.SOLVED_PUZZLES_CATEGORY
         solved_category = discord.utils.get(guild.categories, name=solved_category_name)
         if not solved_category:
             avail_categories = [c.name for c in guild.categories]
@@ -412,6 +457,16 @@ class Puzzles(commands.Cog):
         message = f"Archived {len(puzzles_to_archive)} solved puzzle channels: {mentions}"
         logger.info(message)
         await ctx.send(message)
+
+    @tasks.loop(seconds=30.0)
+    async def archived_solved_puzzles_loop(self):
+        """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
+        for guild in self.bot.guilds:
+            await self.archive_solved_puzzles(guild)
+
+    @archived_solved_puzzles_loop.before_loop
+    async def before_archiving(self):
+        await self.bot.wait_until_ready()
 
 def setup(bot):
     bot.add_cog(Puzzles(bot))

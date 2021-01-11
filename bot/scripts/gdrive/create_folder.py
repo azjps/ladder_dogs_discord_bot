@@ -1,3 +1,8 @@
+"""
+Create a Google Drive folder in specified parent folder
+
+python -m bot.scripts.gdrive.create_folder --name [..] --parent [ID]
+"""
 import asyncio
 
 from bot.utils.gdrive import get_or_create_folder

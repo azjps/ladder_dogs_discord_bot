@@ -1,3 +1,9 @@
+"""
+Settings Cog shipped with cookiecutter-discordpy-postgres.
+
+The settings here are unrelated to puzzle_settings.py
+"""
+
 import discord
 from discord.ext import commands
 

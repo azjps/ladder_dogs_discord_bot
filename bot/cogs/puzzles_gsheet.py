@@ -1,3 +1,10 @@
+"""
+Google Drive integration for puzzle organization
+
+This is a separate cog so that Google Drive integration
+can be easily disabled; simply omit this file.
+"""
+
 import datetime
 import logging
 import string
@@ -11,9 +18,10 @@ import pytz
 
 from bot.utils import urls
 from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
-from bot.utils.puzzle_settings import GuildSettingsDb
+from bot.utils.puzzle_settings import GuildSettingsDb, GuildSettings
 from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
+from bot.utils.gsheet_nexus import update_nexus
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +65,7 @@ class GoogleSheets(commands.Cog):
             await text_channel.send(embed=embed)
 
             # add some helpful links
-            await self.add_quick_links_worksheet(spreadsheet, puzzle)
+            await self.add_quick_links_worksheet(spreadsheet, puzzle, settings)
 
         except Exception as exc:
             logger.exception(f"Unable to create spreadsheet for {round_name}/{name}")
@@ -72,18 +80,21 @@ class GoogleSheets(commands.Cog):
         cell_range[(row - 1) * 2 + 1].value = value
 
     async def add_quick_links_worksheet(
-        self, spreadsheet: gspread_asyncio.AsyncioGspreadSpreadsheet, puzzle: PuzzleData
+        self, spreadsheet: gspread_asyncio.AsyncioGspreadSpreadsheet, puzzle: PuzzleData, settings: GuildSettings
     ):
         worksheet = await spreadsheet.add_worksheet(title="Quick Links", rows=10, cols=2)
         cell_range = await worksheet.range(1, 1, 10, 2)
 
         self.update_cell_row(cell_range, 1, "Hunt URL", puzzle.hunt_url)
         self.update_cell_row(cell_range, 2, "Drive folder", urls.drive_folder_url(puzzle.google_folder_id))
-        self.update_cell_row(cell_range, 3, "Discord channel mention", puzzle.channel_mention)
+        nexus_url = urls.spreadsheet_url(settings.drive_nexus_sheet_id) if settings.drive_nexus_sheet_id else ""
+        self.update_cell_row(cell_range, 3, "Nexus", nexus_url)
+        self.update_cell_row(cell_range, 4, "Resources", "")        
+        self.update_cell_row(cell_range, 5, "Discord channel mention", puzzle.channel_mention)
         self.update_cell_row(
-            cell_range, 4, "Reminders", "Please create a new worksheet if you're making large changes (e.g. re-sorting)"
+            cell_range, 6, "Reminders", "Please create a new worksheet if you're making large changes (e.g. re-sorting)"
         )
-        self.update_cell_row(cell_range, 5, "", "You can use Ctrl+Alt+M to leave a comment on a cell")
+        self.update_cell_row(cell_range, 7, "", "You can use Ctrl+Alt+M to leave a comment on a cell")
         await worksheet.update_cells(cell_range)
 
         # Not async
@@ -96,6 +107,19 @@ class GoogleSheets(commands.Cog):
             return f"[SOLVED: {puzzle.solution}] {sheet_name}"
 
         return await rename_file(puzzle.google_sheet_id, name_lambda=archive_puzzle_name)
+
+    @tasks.loop(seconds=60.0)
+    async def refresh_nexus(self):
+        """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
+        for guild in self.bot.guilds:
+            settings = GuildSettingsDb.get_cached(guild.id)
+            if settings.drive_nexus_sheet_id:
+                puzzles = PuzzleJsonDb.get_all(guild.id)
+                await update_nexus(agcm=self.agcm, file_id=settings.drive_nexus_sheet_id, puzzles=puzzles)
+
+    @archived_solved_puzzles_loop.before_loop
+    async def before_refreshing_nexus(self):
+        await self.bot.wait_until_ready()
 
 
 def setup(bot):

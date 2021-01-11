@@ -1,3 +1,8 @@
+"""
+Rename specified Google Drive file by id
+
+python -m bot.scripts.gdrive.rename_file --id [ID] --name [..]
+"""
 import asyncio
 
 from bot.utils.gdrive import rename_file

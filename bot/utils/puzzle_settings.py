@@ -13,22 +13,43 @@ if "LADDER_SPOT_DATA_DIR" in os.environ:
 @dataclass_json
 @dataclass
 class GuildSettings:
-    guild_id: int = 0
+    guild_id: int
     guild_name: str = ""
     hunt_url: str = ""
-    discord_bot_channel: str = ""  # channel to listen for bot commands
-    drive_parent_id: str = ""
-    drive_nexus_sheet_id: str = ""
+    discord_bot_channel: str = ""   # Channel to listen for bot commands
+    drive_parent_id: str = ""       # ID of root drive folder
+    drive_nexus_sheet_id: str = ""  # Refer to gsheet_nexus.py
+    drive_resources_id: str = ""    # Document with resources links, etc 
 
 
 class GuildSettingsDb:
-    def get(guild_id: int) -> GuildSettings:
+    cached_settings = {}
+
+    @classmethod
+    def get(cls, guild_id: int) -> GuildSettings:
         settings_path = DATA_DIR / str(guild_id) / "settings.json"
         if settings_path.exists():
             with settings_path.open() as fp:
                 settings = GuildSettings.from_json(fp.read())
         else:
+            # Populate empty settings file
             settings = GuildSettings(guild_id=guild_id)
-            with settings_path.open("w") as fp:
-                fp.write(settings.to_json(indent=4))
+            cls.commit(settings)
         return settings
+
+    @classmethod
+    def get_cached(cls, guild_id: int) -> GuildSettings:
+        if guild_id in cls.cached_settings:
+            return cls.cached_settings[guild_id]
+        settings = cls.get(guild_id)
+        cls.cached_settings[guild_id] = settings
+        return settings
+
+    @classmethod
+    def commit(cls, settings: GuildSettings):
+        settings_path = DATA_DIR / str(settings.guild_id) / "settings.json"
+        settings_path.parent.parent.mkdir(exist_ok=True)
+        settings_path.parent.mkdir(exist_ok=True)
+        with settings_path.open("w") as fp:
+            fp.write(settings.to_json(indent=4))
+        cls.cached_settings[settings.guild_id] = settings
