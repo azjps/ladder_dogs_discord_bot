@@ -58,13 +58,30 @@ async def get_or_create_folder(name: str, parent_id: str) -> dict:
     return created_folder
 
 
-if __name__ == "__main__":
-    # Find or create a new folder
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--name", required=True, help="Name of folder to create")
-    parser.add_argument("--parent", required=True, help="ID of folder in which to create this folder")
-    args = parser.parse_args()
+async def rename_file(file_id: str, name_lambda: callable) -> dict:
+    """Rename file
 
-    result = asyncio.run(get_or_create_folder(args.name, args.parent), debug=True)
-    print(result)
+    Ref: https://developers.google.com/drive/api/v3/reference/files/update
+
+    Args:
+        name_lambda: method which takes original name and returns new name
+    """
+    aiogoogle = Aiogoogle(service_account_creds=creds)
+    async with aiogoogle:
+        drive_v3 = await aiogoogle.discover("drive", "v3")
+        result = await aiogoogle.as_service_account(
+            drive_v3.files.get(
+                fileId=file_id,
+            )
+        )
+        name = result["name"]
+        new_name = name_lambda(name)
+        if name != new_name:
+            payload = {"name": new_name}
+            result = await aiogoogle.as_service_account(
+                drive_v3.files.update(
+                    json=payload,
+                    fileId=file_id,
+                )
+            )
+    return result  # {"name": .., "id": .., "kind": .., "mimeType": ..}

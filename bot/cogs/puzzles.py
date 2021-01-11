@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 import pytz
 
+from bot.utils import urls
 from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
 
 logger = logging.getLogger(__name__)
@@ -135,7 +136,11 @@ class Puzzles(commands.Cog):
             PuzzleJsonDb.commit(puzzle_data)
             await self.send_initial_puzzle_channel_messages(text_channel)
 
-            # await self.create_puzzle_spreadsheet(text_channel, name=name, round_name=round_name)
+            gsheet_cog = self.bot.get_cog("GoogleSheets")
+            print("google sheets cog:", gsheet_cog)
+            if gsheet_cog is not None:
+                # update google sheet ID
+                await gsheet_cog.create_puzzle_spreadsheet(text_channel, puzzle_data)
 
         voice_channel, created_voice = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=channel_name, channel_type="voice", reason=self.PUZZLE_REASON
@@ -169,7 +174,6 @@ class Puzzles(commands.Cog):
 • `!solve SOLUTION` will mark this puzzle as solved and archive this channel to #solved-puzzles
 • `!link <url>` will update the link to the puzzle on the hunt website
 • `!doc <url>` will update the Google Drive link
-* `!res` or `!resources` will show links to some useful puzzling resources
 * `!info` will re-post this message
 • `!delete` should *only* be used if a channel was mistakenly created.
 • `!type crossword` will mark the type of the puzzle, for others to know
@@ -225,7 +229,8 @@ class Puzzles(commands.Cog):
         """Send simple embed showing relevant links"""
         embed = discord.Embed(description=description)
         embed.add_field(name="Hunt URL", value=puzzle_data.hunt_url or "?")
-        embed.add_field(name="Google Drive", value=puzzle_data.google_docs_url or "?")
+        spreadsheet_url = urls.spreadsheet_url(puzzle_data.google_sheet_id) if puzzle_data.google_sheet_id else "?"
+        embed.add_field(name="Google Drive", value=spreadsheet_url)
         embed.add_field(name="Status", value=puzzle_data.status or "?")
         embed.add_field(name="Type", value=puzzle_data.puzzle_type or "?")
         await channel.send(embed=embed)
@@ -240,7 +245,13 @@ class Puzzles(commands.Cog):
 
     @commands.command(aliases=["sheet"])
     async def doc(self, ctx, *, url: Optional[str]):
-        puzzle_data = await self.update_puzzle_attr_by_command(ctx, "google_docs_url", url, reply=False)
+        file_id = None
+        if url:
+            file_id = urls.extract_id_from_url(url)
+            if not file_id:
+                ctx.send(f":exclamation: Invalid Google Drive URL, unable to extract file ID: {url}")
+
+        puzzle_data = await self.update_puzzle_attr_by_command(ctx, "google_sheet_id", file_id, reply=False)
         if puzzle_data:
             await self.send_state(
                 ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
@@ -292,7 +303,7 @@ class Puzzles(commands.Cog):
             name="Follow-up",
             value="If the solution was mistakenly entered, please message `!unsolve`. "
             "Otherwise, I will automatically archive this puzzle channel to #solved-puzzles "
-            "in 5 minutes.",
+            "and archive the Spreadsheet in around 5 minutes.",
         )
         await ctx.send(embed=embed)
 
@@ -316,6 +327,7 @@ class Puzzles(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
+    @commands.has_permissions(manage_channels=True)
     async def delete(self, ctx):
         """Permanently delete a channel"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
@@ -366,6 +378,8 @@ class Puzzles(commands.Cog):
                 f"{solved_category_name} category does not exist; available categories: {avail_categories}"
             )
         
+        gsheet_cog = self.bot.get_cog("GoogleSheets")
+
         for puzzle in puzzles_to_archive:
             channel = discord.utils.get(
                 guild.channels, type=discord.ChannelType.text, id=puzzle.channel_id
@@ -378,6 +392,9 @@ class Puzzles(commands.Cog):
             )
             if voice_channel:
                 await voice_channel.delete()
+
+            if gsheet_cog:
+                await gsheet_cog.archive_puzzle_spreadsheet(puzzle)
 
             puzzle.archive_time = datetime.datetime.now(tz=pytz.UTC)
             puzzle.archive_channel_mention = channel.mention

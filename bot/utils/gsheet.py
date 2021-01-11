@@ -48,7 +48,7 @@ def spreadsheet_link(sheet_id: str):
 
 
 async def create_spreadsheet(
-    agc: gspread_asyncio.AsyncioGspreadClientManager,
+    agcm: gspread_asyncio.AsyncioGspreadClientManager,
     title: str,
     folder_id: Optional[str] = None,
     share_anyone: bool = True,

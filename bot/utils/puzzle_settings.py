@@ -18,6 +18,7 @@ class GuildSettings:
     hunt_url: str = ""
     discord_bot_channel: str = ""  # channel to listen for bot commands
     drive_parent_id: str = ""
+    drive_nexus_sheet_id: str = ""
 
 
 class GuildSettingsDb:
