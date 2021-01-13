@@ -19,9 +19,11 @@ class Puzzles(commands.Cog):
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
     SOLVED_PUZZLES_CATEGORY = "SOLVED PUZZLES"
+    PRIORITIES = ["low", "medium", "high", "very high"]
 
     def __init__(self, bot):
         self.bot = bot
+        self.archived_solved_puzzles_loop.start()
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -40,9 +42,27 @@ class Puzzles(commands.Cog):
         #     await ctx.send('You do not have the correct role for this command.')
         await ctx.send(":exclamation: " + str(error))
 
+    async def check_is_bot_channel(self, ctx) -> bool:
+        """Check if command was sent to bot channel configured in settings"""
+        settings = GuildSettingsDb.get_cached(ctx.guild.id)
+        if not settings.discord_bot_channel:
+            # If no channel is designated, then all channels are fine
+            # to listen to commands.
+            return True
+
+        if ctx.channel.name == settings.discord_bot_channel:
+            # Channel name matches setting (note, channel name might not be unique)
+            return True
+
+        await ctx.send(f":exclamation: Most bot commands should be sent to #{settings.discord_bot_channel}")
+        return False
+
     @commands.command(aliases=["p"])
     async def puzzle(self, ctx, *, arg):
-        """*Create new puzzle channels: !p round-name: puzzle-name*"""
+        """*Create new puzzle channels: !p round-name: puzzle-name*
+        
+        Can be posted in either a #meta channel or the bot channel
+        """
         guild = ctx.guild
         if ctx.channel.name == "meta":
             category = ctx.channel.category
@@ -55,6 +75,9 @@ class Puzzles(commands.Cog):
                 puzzle_name = arg
             return await self.create_puzzle_channel(ctx, category.name, puzzle_name)
 
+        if not self.check_is_bot_channel(ctx):
+            return
+
         if ":" in arg:
             round_name, puzzle_name = arg.split(":", 1)
             return await self.create_puzzle_channel(ctx, round_name, puzzle_name)
@@ -64,6 +87,9 @@ class Puzzles(commands.Cog):
     @commands.command(aliases=["r"])
     async def round(self, ctx, *, arg):
         """*Create new puzzle round: !r round-name*"""
+        if not self.check_is_bot_channel(ctx):
+            return
+
         category_name = self.clean_name(arg)
         guild = ctx.guild
         category = discord.utils.get(guild.categories, name=category_name)
@@ -98,11 +124,21 @@ class Puzzles(commands.Cog):
     @commands.command(aliases=["list"])
     async def list_puzzles(self, ctx):
         """*List all puzzles and their statuses*"""
+        if not self.check_is_bot_channel(ctx):
+            return
+
         all_puzzles = PuzzleJsonDb.get_all(ctx.guild.id)
         # TODO: this is very primitive
         message = ""
         for puzzle in all_puzzles:
-            message += f"{puzzle.round_name} {puzzle.channel_mention} {puzzle.puzzle_type} {puzzle.status}\n"
+            message += f"{puzzle.round_name} {puzzle.channel_mention}"
+            if puzzle.puzzle_type:
+                message += f" type:{puzzle.puzzle_type}"
+            if puzzle.solution:
+                message += f" solution:**{puzzle.solution}**"
+            elif puzzle.status:
+                message += f" status:{puzzle.status}"
+            message += "\n"
 
         embed = discord.Embed()
         embed.add_field(
@@ -209,6 +245,7 @@ class Puzzles(commands.Cog):
 • `!type crossword` will mark the type of the puzzle, for others to know
 • `!priority high` will mark the priority of the puzzle, for others to know
 • `!status extracting` will update the status of the puzzle, for others to know
+• `!note flavortext clues braille` can be used to leave a note about ideas/progress
 """,
             inline=False,
         )
@@ -221,6 +258,10 @@ class Puzzles(commands.Cog):
             await ctx.send("This does not appear to be a puzzle channel")
 
     def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
+        """Extract puzzle data based on the channel name and category name
+        
+        Looks up the corresponding JSON data
+        """
         if not channel.category:
             return None
 
@@ -278,7 +319,7 @@ class Puzzles(commands.Cog):
                 ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
             )
 
-    @commands.command(aliases=["sheet"])
+    @commands.command(aliases=["sheet", "drive"])
     async def doc(self, ctx, *, url: Optional[str]):
         file_id = None
         if url:
@@ -292,6 +333,51 @@ class Puzzles(commands.Cog):
                 ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
             )
 
+    @commands.command(aliases=["notes"])
+    async def note(self, ctx, *, note: Optional[str]):
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
+            return
+
+        message = "Showing notes left by users!"
+        if note:
+            puzzle_data.notes.append(f"{note} - {ctx.message.jump_url}")
+            PuzzleJsonDb.commit(puzzle_data)
+            message = f"Added a new note! Use `!erase_note {len(puzzle_data.notes)}` to remove the note if needed."
+
+        if puzzle_data.notes:
+            embed = discord.Embed(description=f"{message}")
+            embed.add_field(
+                name="Notes",
+                value="\n".join([f"{i+1}: {puzzle_data.notes[i]}" for i in range(len(puzzle_data.notes))])
+            )
+        else:
+            embed = discord.Embed(description="No notes left yet, use `!note my note here` to leave a note")
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def erase_note(self, ctx, note_index: int):
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
+            return
+
+        if 1 <= note_index <= len(puzzle_data.notes):
+            note = puzzle_data.notes[note_index-1]
+            del puzzle_data.notes[note_index - 1]
+            PuzzleJsonDb.commit(puzzle_data)
+            description = f"Erased note {note_index}: `{note}`"
+        else:
+            description = f"Unable to find note {note_index}"
+
+        embed = discord.Embed(description=description)
+        embed.add_field(
+            name="Notes",
+            value="\n".join([f"{i+1}, {puzzle_data.notes[i]}" for i in range(len(puzzle_data.notes))])
+        )
+        await ctx.send(embed=embed)
+
     @commands.command()
     async def status(self, ctx, *, status: Optional[str]):
         puzzle_data = await self.update_puzzle_attr_by_command(ctx, "status", status, reply=False)
@@ -302,7 +388,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def type(self, ctx, *, puzzle_type: Optional[str]):
-        await self.update_puzzle_attr_by_command(ctx, "puzzle_type", puzzle_type, reply=False)
+        puzzle_data = await self.update_puzzle_attr_by_command(ctx, "puzzle_type", puzzle_type, reply=False)
         if puzzle_data:
             await self.send_state(
                 ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if puzzle_type else None
@@ -310,21 +396,26 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def priority(self, ctx, *, priority: Optional[str]):
-        await self.update_puzzle_attr_by_command(ctx, "priority", priority, reply=False)
+        if priority is not None and priority not in self.PRIORITIES:
+            await ctx.send(f":exclamation: Priority should be one of {self.PRIORITIES}, got \"{priority}\"")
+            return
+
+        puzzle_data = await self.update_puzzle_attr_by_command(ctx, "priority", priority, reply=False)
         if puzzle_data:
             await self.send_state(
                 ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if priority else None
             )
 
-    @commands.command(aliases=["res"])
-    async def resources(self, ctx):
-        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
-        if not puzzle_data:
-            await self.send_not_puzzle_channel(ctx)
-            return
-
-        embed = discord.Embed(description=f"""Resources: """)
-        await ctx.send(embed=embed)
+    # Currently not very useful, resources also posted in Quick Links worksheet
+    # @commands.command(aliases=["res"])
+    # async def resources(self, ctx):
+    #     puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+    #     if not puzzle_data:
+    #         await self.send_not_puzzle_channel(ctx)
+    #         return
+    # 
+    #     embed = discord.Embed(description=f"""Resources: """)
+    #     await ctx.send(embed=embed)
 
     @commands.command()
     async def solve(self, ctx, *, arg):
@@ -452,6 +543,8 @@ class Puzzles(commands.Cog):
         
         Done automatically on task loop, so this is only useful for debugging
         """
+        if not self.check_is_bot_channel(ctx):
+            return
         puzzles_to_archive = await self.archive_solved_puzzles(ctx.guild)
         mentions = " ".join([p.channel_mention for p in puzzles_to_archive])
         message = f"Archived {len(puzzles_to_archive)} solved puzzle channels: {mentions}"
@@ -467,6 +560,7 @@ class Puzzles(commands.Cog):
     @archived_solved_puzzles_loop.before_loop
     async def before_archiving(self):
         await self.bot.wait_until_ready()
+        print("Ready to start archiving solved puzzles")
 
 def setup(bot):
     bot.add_cog(Puzzles(bot))

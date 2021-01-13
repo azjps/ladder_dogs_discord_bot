@@ -77,8 +77,9 @@ class _PuzzleJsonDb:
         try:
             with self.puzzle_path(puzzle_name, round_name=round_name, guild_id=guild_id).open() as fp:
                 return PuzzleData.from_json(fp.read())
-        except IOError as exc:
-            if exc.errno == errno.EEXIST:
+        except (IOError, OSError) as exc:
+            # can also just catch FileNotFoundError
+            if exc.errno == errno.ENOENT:
                 raise MissingPuzzleError(f"Unable to find puzzle {puzzle_name} for {round_name}")
             raise
 

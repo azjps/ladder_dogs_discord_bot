@@ -1,14 +1,16 @@
 # Discord Bot for Ladder Dogs
-Discord bot which manages puzzle channels for puzzle hunts via discord commands.
+Simple discord bot which manages puzzle channels for puzzle hunts via discord commands, used by a small-to-medium sized team.
+
 This was initially created from [`cookiecutter-discord.py-postgres`](https://github.com/makupi/cookiecutter-discord.py-postgres) and uses [`aiogoogle`](https://aiogoogle.readthedocs.io/en/latest/)/[`gspread_asyncio`](https://gspread-asyncio.readthedocs.io/en/latest/index.html) for (optional) Google Drive integration.
 
-To keep things very simple (and because I started this a week before Hunt starts), currently this is not using a postgres DB, and is just storing some simple puzzle metadata via JSON files. If this bot works well enough, likely will switch to postgres/gino/alembic for next time.
+To keep things very simple (and because I started this a week before Hunt starts), currently this is not using a postgres DB, and is just storing some simple puzzle metadata via JSON files and [`dataclasses_json`](https://pypi.org/project/dataclasses-json/). If this bot works well enough, likely will switch to postgres/gino/alembic for next time.
 
 # Usage
 
 Most users will just need to become familiar with two commands:
 1. To post a new puzzle channel, post `!p puzzle-name` in the `#meta` channel of the corresponding puzzle round.
-   This will create a new text and voice channel where puzzle discussion can take place.
+   This will create a new text and voice channel where puzzle discussion can take place, as well as
+   a new Google Spreadsheet with a handy `Quick Links` worksheet.
    You can scroll the sidebar or use `Ctrl + K` to help search for existing puzzle channels. 
 2. When Hunt HQ has confirmed that the puzzle has been solved, post `!solve SOLUTION` in the puzzle channel.
    The channels will be automatically archived afterwards.
@@ -34,12 +36,27 @@ When the puzzle is solved, post `!solve SOLUTION` in the puzzle's channel. The t
 to the `#solved-puzzles` category) after ~5 minutes, and the voice channel will be deleted. If this is mistakenly entered,
 this can be undone by posting `!unsolve`.
 
+There are various other commands for updating the status, type, priority, and notes associated with a puzzle.
+These fields are mainly for others to easily find out about the status of other puzzles. They can be retrieved
+on the discord channels using the corresponding commands (see `!info` for the available commands), or viewed
+in aggregate on the Nexus spreadsheet, where all puzzles and links are listed.
+
+## Admin
+
+Users with the `manage_channel` role can update administrative settings via `!update_setting {key} {value}`, where
+all of the settings can be viewed via `!show_settings`. At the start of hunt, an admin should set
+`!update_setting hunt_url https://hunt-website/puzzle/` to the base url where puzzles can be found.
+This hunt url will be used to guess the link to the puzzle when new puzzles are posted. If the generated
+puzzle link is wrong, it can be updated by posting `!link https://correct-hunt-website-link` in the puzzle channel.
+
+There are also various links to Google Drive that should be updated prior to the start of hunt,
+like the IDs of the root Google Drive folder, Resources document, and Nexus spreadsheet.
+
 # Todos
 
-* Create Google Spreadsheet on new puzzle and guess link on hunt website
 * Configuring a single channel to listen for bot commands
-* Task event loop for archiving solved puzzles, updating nexus sheet
-
+* Sorting nexus puzzles by creation time
+* Bundling puzzles and uploading metadata to Google Drive for backup?
 # Setup
 
 Clone this repository

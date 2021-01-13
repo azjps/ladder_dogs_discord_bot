@@ -6,6 +6,7 @@ import logging
 
 import gspread_asyncio
 
+from bot.utils import urls
 from bot.utils.puzzles_data import PuzzleData
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ COLUMNS = [
     "round_name",
     "channel_mention",
     "hunt_url",
-    "google_docs_url",
+    "google_sheet_url",
     "status",
     "solution",
     "priority",
@@ -46,7 +47,10 @@ async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_i
         cell_index += 1
     for puzzle in puzzles:
         for column in COLUMNS:
-            cell_range[cell_index].value = str(getattr(puzzle, column, ""))
+            if column == "google_sheet_url" and puzzle.google_sheet_id:
+                cell_range[cell_index].value = urls.spreadsheet_url(puzzle.google_sheet_id)
+            else:
+                cell_range[cell_index].value = str(getattr(puzzle, column, ""))
             cell_index += 1
     assert cell_index == len(cell_range)
     await zero_ws.update_cells(cell_range)

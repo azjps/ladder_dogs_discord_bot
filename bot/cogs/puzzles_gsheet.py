@@ -11,7 +11,7 @@ import string
 from typing import Optional
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import gspread_asyncio
 import gspread_formatting
 import pytz
@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 class GoogleSheets(commands.Cog):
     agcm = get_manager()
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.refresh_nexus.start()
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -117,9 +121,10 @@ class GoogleSheets(commands.Cog):
                 puzzles = PuzzleJsonDb.get_all(guild.id)
                 await update_nexus(agcm=self.agcm, file_id=settings.drive_nexus_sheet_id, puzzles=puzzles)
 
-    @archived_solved_puzzles_loop.before_loop
+    @refresh_nexus.before_loop
     async def before_refreshing_nexus(self):
         await self.bot.wait_until_ready()
+        print("Ready to start updating nexus spreadsheet")
 
 
 def setup(bot):
