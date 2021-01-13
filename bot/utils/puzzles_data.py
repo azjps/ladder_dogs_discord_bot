@@ -41,6 +41,26 @@ class PuzzleData:
     solve_time: Optional[datetime.datetime] = None
     archive_time: Optional[datetime.datetime] = None
 
+    @classmethod
+    def sort_by_round_start(cls, puzzles: list) -> list:
+        """Return list of PuzzleData objects sorted by start of round time
+        
+        Groups puzzles in the same round together, and sorts puzzles within round
+        by start_time.
+        """
+        round_start_times = {}
+
+        for puzzle in puzzles:
+            if puzzle.start_time is None:
+                continue
+
+            start_time = puzzle.start_time.timestamp()  # epoch time
+            round_start_time = round_start_times.get(puzzle.round_name)
+            if round_start_time is None or start_time < round_start_time:
+                round_start_times[puzzle.round_name] = start_time
+
+        return sorted(puzzles, key=lambda p: (round_start_times.get(p.round_name, 0), p.start_time or 0))
+
 
 class _PuzzleJsonDb:
     def __init__(self, dir_path: Path):
@@ -92,7 +112,7 @@ class _PuzzleJsonDb:
                     puzzle_datas.append(PuzzleData.from_json(fp.read()))
             except Exception:
                 logger.exception(f"Unable to load puzzle data from {path}")
-        return puzzle_datas
+        return PuzzleData.sort_by_round_start(puzzle_datas)
 
     def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta=False) -> list[PuzzleData]:
         all_puzzles = self.get_all(guild_id)
