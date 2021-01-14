@@ -93,7 +93,8 @@ class GoogleSheets(commands.Cog):
         self.update_cell_row(cell_range, 2, "Drive folder", urls.drive_folder_url(puzzle.google_folder_id))
         nexus_url = urls.spreadsheet_url(settings.drive_nexus_sheet_id) if settings.drive_nexus_sheet_id else ""
         self.update_cell_row(cell_range, 3, "Nexus", nexus_url)
-        self.update_cell_row(cell_range, 4, "Resources", "")        
+        resources_url = urls.file_id(settings.drive_resources_id) if settings.drive_resources_id else ""
+        self.update_cell_row(cell_range, 4, "Resources", resources_url)
         self.update_cell_row(cell_range, 5, "Discord channel mention", puzzle.channel_mention)
         self.update_cell_row(
             cell_range, 6, "Reminders", "Please create a new worksheet if you're making large changes (e.g. re-sorting)"
