@@ -504,7 +504,7 @@ class Puzzles(commands.Cog):
 
         await ctx.channel.send(f"```json\n{puzzle_data.to_json()}```")
 
-    async def archive_solved_puzzles(self, guild: discord.Guild) -> list[PuzzleData]:
+    async def archive_solved_puzzles(self, guild: discord.Guild) -> List[PuzzleData]:
         """Archive puzzles for which sufficient time has elapsed since solve time
 
         Move them to a solved-puzzles channel category, and rename spreadsheet

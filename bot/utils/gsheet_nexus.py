@@ -30,7 +30,7 @@ COLUMNS = [
 ]
 
 
-async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_id: str, puzzles: list[PuzzleData]):
+async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_id: str, puzzles: List[PuzzleData]):
     # Always authorize first.
     # If you have a long-running program call authorize() repeatedly.
     agc = await agcm.authorize()

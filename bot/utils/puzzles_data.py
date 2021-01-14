@@ -5,7 +5,7 @@ import errno
 import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import pytz
 
@@ -36,7 +36,7 @@ class PuzzleData:
     solution: str = ""
     priority: str = ""
     puzzle_type: str = ""
-    notes: list[str] = field(default_factory=list)
+    notes: List[str] = field(default_factory=list)
     start_time: Optional[datetime.datetime] = None
     solve_time: Optional[datetime.datetime] = None
     archive_time: Optional[datetime.datetime] = None
@@ -103,7 +103,7 @@ class _PuzzleJsonDb:
                 raise MissingPuzzleError(f"Unable to find puzzle {puzzle_name} for {round_name}")
             raise
 
-    def get_all(self, guild_id) -> list[PuzzleData]:
+    def get_all(self, guild_id) -> List[PuzzleData]:
         paths = self.dir_path.rglob(f"{guild_id}/*/*.json")
         puzzle_datas = []
         for path in paths:
@@ -114,7 +114,7 @@ class _PuzzleJsonDb:
                 logger.exception(f"Unable to load puzzle data from {path}")
         return PuzzleData.sort_by_round_start(puzzle_datas)
 
-    def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta=False) -> list[PuzzleData]:
+    def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta=False) -> List[PuzzleData]:
         all_puzzles = self.get_all(guild_id)
         now = now or datetime.datetime.now(tz=pytz.UTC)
         puzzles_to_archive = []
