@@ -486,6 +486,15 @@ class Puzzles(commands.Cog):
         # delete text channel last so that errors can be reported
         await ctx.channel.delete(reason=self.DELETE_REASON)
 
+    # async def confirm_delete(self, ctx):
+    #     ref: https://github.com/stroupbslayen/discord-pretty-help/blob/master/pretty_help/pretty_help.py
+    #     embed = discord.Embed(description="Are you sure you wish to delete this channel? All of this channel's contents will be permanently deleted.")
+    #     message: discord.Message = await ctx.send(embed=embed)
+    #     message.add_reaction()
+    #     payload: discord.RawReactionActionEvent = await bot.wait_for(
+    #         "raw_reaction_add", timeout=self.active_time, check=check
+    #     )
+        
     @commands.command()
     async def debug_puzzle_channel(self, ctx):
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)

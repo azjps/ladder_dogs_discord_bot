@@ -131,6 +131,14 @@ class _PuzzleJsonDb:
                     # enough time has passed, archive the channel
                     puzzles_to_archive.append(puzzle)
         return puzzles_to_archive
-        
+
+    def aggregate_json(self) -> dict:
+        paths = self.dir_path.rglob(f"*/*.json")
+        result = {}
+        for path in paths:
+            relpath = path.relative_to(self.dir_path)
+            with path.open() as fp:
+                result[str(relpath)] = json.load(fp)
+        return result
 
 PuzzleJsonDb = _PuzzleJsonDb(dir_path=DATA_DIR)

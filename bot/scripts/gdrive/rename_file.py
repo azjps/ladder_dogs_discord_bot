@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Rename specified Google Drive file by id
 

@@ -52,11 +52,6 @@ puzzle link is wrong, it can be updated by posting `!link https://correct-hunt-w
 There are also various links to Google Drive that should be updated prior to the start of hunt,
 like the IDs of the root Google Drive folder, Resources document, and Nexus spreadsheet.
 
-# Todos
-
-* Configuring a single channel to listen for bot commands
-* Sorting nexus puzzles by creation time
-* Bundling puzzles and uploading metadata to Google Drive for backup?
 # Setup
 
 Clone this repository
@@ -95,4 +90,4 @@ python -m pytest
 
 # Credits
 
-Inspired by various open source discord bot python projects like [cookiecutter-discord.py-postres](https://github.com/makupi/cookiecutter-discord.py-postgres) and [discord-pretty-help](https://github.com/stroupbslayen/discord-pretty-help/). Licensed under [GPL 3.0](https://choosealicense.com/licenses/gpl-3.0/).
+Inspired by various open source discord bot python projects like [cookiecutter-discord.py-postgres](https://github.com/makupi/cookiecutter-discord.py-postgres) and [discord-pretty-help](https://github.com/stroupbslayen/discord-pretty-help/). Licensed under [GPL 3.0](https://choosealicense.com/licenses/gpl-3.0/).
