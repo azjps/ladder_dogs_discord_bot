@@ -3,7 +3,7 @@ Maintain a central "nexus" dashboard with links to puzzles, status, and so forth
 """
 import logging
 import string
-from typing import Optional
+from typing import List, Optional
 
 import gspread_asyncio
 

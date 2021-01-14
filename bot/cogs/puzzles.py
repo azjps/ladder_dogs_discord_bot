@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Optional
+from typing import List, Optional
 
 import discord
 from discord.ext import commands, tasks
