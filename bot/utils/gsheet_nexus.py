@@ -44,7 +44,7 @@ async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_i
     cell_range = await zero_ws.range(HEADER_ROW, 1, HEADER_ROW + len(puzzles), len(COLUMNS))
     cell_index = 0
     for column in COLUMNS:
-        cell_range[cell_index].value = string.capwords(column.replace("-", " "))
+        cell_range[cell_index].value = string.capwords(column.replace("_", " "))
         cell_index += 1
     for puzzle in puzzles:
         for column in COLUMNS:

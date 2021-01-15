@@ -18,7 +18,7 @@ class Puzzles(commands.Cog):
     META_REASON = "bot-meta"
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
-    SOLVED_PUZZLES_CATEGORY = "SOLVED PUZZLES"
+    SOLVED_PUZZLES_CATEGORY = "SOLVED PUZZLES"  # TODO: this should be a guild setting
     PRIORITIES = ["low", "medium", "high", "very high"]
 
     def __init__(self, bot):
