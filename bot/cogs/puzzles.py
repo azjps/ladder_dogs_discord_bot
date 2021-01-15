@@ -201,9 +201,9 @@ class Puzzles(commands.Cog):
                 hunt_url_base = settings.hunt_url.rstrip("/")
                 if channel_name == "meta":
                     # Use the round name in the URL
-                    hunt_name = category_name.lower().replace("-", "_")
+                    hunt_name = category_name.lower().replace("-", settings.hunt_url_sep)
                 else:
-                    hunt_name = channel_name.replace("-", "_")
+                    hunt_name = channel_name.replace("-", settings.hunt_url_sep)
                 puzzle_data.hunt_url = f"{hunt_url_base}/{hunt_name}"
             PuzzleJsonDb.commit(puzzle_data)
             await self.send_initial_puzzle_channel_messages(text_channel)
