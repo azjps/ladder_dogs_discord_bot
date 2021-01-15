@@ -194,11 +194,16 @@ class Puzzles(commands.Cog):
             )
             settings = GuildSettingsDb.get_cached(guild.id)
             if settings.hunt_url:
+                # NOTE: this is a heuristic and may need to be updated!
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
                 hunt_url_base = settings.hunt_url.rstrip("/")
-                hunt_name = channel_name.replace("-", "_")
-                puzzle_data.hunt_url = f"{hunt_url_base}/{channel_name}"
+                if channel_name == "meta":
+                    # Use the round name in the URL
+                    hunt_name = category_name.lower().replace("-", "_")
+                else:
+                    hunt_name = channel_name.replace("-", "_")
+                puzzle_data.hunt_url = f"{hunt_url_base}/{hunt_name}"
             PuzzleJsonDb.commit(puzzle_data)
             await self.send_initial_puzzle_channel_messages(text_channel)
 

@@ -43,8 +43,11 @@ class GoogleSheets(commands.Cog):
 
     async def create_puzzle_spreadsheet(self, text_channel: discord.TextChannel, puzzle: PuzzleData):
         guild_id = text_channel.guild.id
-        name = puzzle.name
+        name = puzzle.name            
         round_name = puzzle.round_name
+        if name == "meta":
+            name = f"{name} ({round_name})"
+
         settings = GuildSettingsDb.get(guild_id)
         if not settings.drive_parent_id:
             return
