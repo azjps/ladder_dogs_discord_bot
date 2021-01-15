@@ -43,9 +43,10 @@ class GoogleSheets(commands.Cog):
 
     async def create_puzzle_spreadsheet(self, text_channel: discord.TextChannel, puzzle: PuzzleData):
         guild_id = text_channel.guild.id
-        name = puzzle.name            
-        round_name = puzzle.round_name
+        name = self.cap_name(puzzle.name)
+        round_name = self.cap_name(puzzle.round_name)
         if name == "meta":
+            # Distinguish metas between different rounds
             name = f"{name} ({round_name})"
 
         settings = GuildSettingsDb.get(guild_id)
@@ -55,11 +56,11 @@ class GoogleSheets(commands.Cog):
         try:
             # create drive folder if needed
             round_folder = await get_or_create_folder(
-                name=self.cap_name(round_name), parent_id=settings.drive_parent_id
+                name=round_name, parent_id=settings.drive_parent_id
             )
             round_folder_id = round_folder["id"]
 
-            spreadsheet = await create_spreadsheet(agcm=self.agcm, title=self.cap_name(name), folder_id=round_folder_id)
+            spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
             puzzle.google_folder_id = round_folder_id
             puzzle.google_sheet_id = spreadsheet.id
             PuzzleJsonDb.commit(puzzle)

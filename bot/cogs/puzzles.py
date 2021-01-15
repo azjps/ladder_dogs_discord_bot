@@ -103,6 +103,7 @@ class Puzzles(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def show_settings(self, ctx):
+        """*(admin) Show guild-level settings*"""
         guild_id = ctx.guild.id
         settings = GuildSettingsDb.get(guild_id)
         await ctx.channel.send(f"```json\n{settings.to_json()}```")
@@ -110,7 +111,7 @@ class Puzzles(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def update_setting(self, ctx, setting_key: str, setting_value: str):
-        """Update guild setting: !update_setting key value"""
+        """*(admin) Update guild setting: !update_setting key value*"""
         guild_id = ctx.guild.id
         settings = GuildSettingsDb.get(guild_id)
         if hasattr(settings, setting_key):
@@ -280,6 +281,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def info(self, ctx):
+        """*Show discord command help for a puzzle channel*"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
@@ -318,6 +320,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def link(self, ctx, *, url: Optional[str]):
+        """*Show or update link to puzzle*"""
         puzzle_data = await self.update_puzzle_attr_by_command(ctx, "hunt_url", url, reply=False)
         if puzzle_data:
             await self.send_state(
@@ -326,6 +329,7 @@ class Puzzles(commands.Cog):
 
     @commands.command(aliases=["sheet", "drive"])
     async def doc(self, ctx, *, url: Optional[str]):
+        """*Show or update link to google spreadsheet/doc for puzzle*"""
         file_id = None
         if url:
             file_id = urls.extract_id_from_url(url)
@@ -340,6 +344,7 @@ class Puzzles(commands.Cog):
 
     @commands.command(aliases=["notes"])
     async def note(self, ctx, *, note: Optional[str]):
+        """*Show or add a note about the puzzle*"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
@@ -349,7 +354,10 @@ class Puzzles(commands.Cog):
         if note:
             puzzle_data.notes.append(f"{note} - {ctx.message.jump_url}")
             PuzzleJsonDb.commit(puzzle_data)
-            message = f"Added a new note! Use `!erase_note {len(puzzle_data.notes)}` to remove the note if needed."
+            message = (
+                f"Added a new note! Use `!erase_note {len(puzzle_data.notes)}` to remove the note if needed. "
+                f"Check `!notes` for the current list of notes."
+            )
 
         if puzzle_data.notes:
             embed = discord.Embed(description=f"{message}")
@@ -363,6 +371,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def erase_note(self, ctx, note_index: int):
+        """*Remove a note by index*"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
@@ -385,6 +394,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def status(self, ctx, *, status: Optional[str]):
+        """*Show or update puzzle status, e.g. "extracting"*"""
         puzzle_data = await self.update_puzzle_attr_by_command(ctx, "status", status, reply=False)
         if puzzle_data:
             await self.send_state(
@@ -393,6 +403,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def type(self, ctx, *, puzzle_type: Optional[str]):
+        """*Show or update puzzle type, e.g. "crossword"*"""
         puzzle_data = await self.update_puzzle_attr_by_command(ctx, "puzzle_type", puzzle_type, reply=False)
         if puzzle_data:
             await self.send_state(
@@ -401,6 +412,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def priority(self, ctx, *, priority: Optional[str]):
+        """*Show or update puzzle priority, one of "low", "medium", "high"*"""
         if priority is not None and priority not in self.PRIORITIES:
             await ctx.send(f":exclamation: Priority should be one of {self.PRIORITIES}, got \"{priority}\"")
             return
@@ -424,6 +436,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def solve(self, ctx, *, arg):
+        """*Mark puzzle as fully solved, after confirmation from HQ*"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
@@ -448,6 +461,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def unsolve(self, ctx):
+        """*Mark an accidentally solved puzzle as not solved*"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
@@ -468,7 +482,7 @@ class Puzzles(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def delete(self, ctx):
-        """Permanently delete a channel"""
+        """*(admin) Permanently delete a channel*"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
@@ -502,6 +516,7 @@ class Puzzles(commands.Cog):
         
     @commands.command()
     async def debug_puzzle_channel(self, ctx):
+        """*(admin) See puzzle metadata*"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
@@ -553,7 +568,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     async def archive_solved(self, ctx):
-        """Archive solved puzzles
+        """*(admin) Archive solved puzzles. Done automatically*
         
         Done automatically on task loop, so this is only useful for debugging
         """
