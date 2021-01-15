@@ -52,9 +52,9 @@ async def on_ready():
 
 def setup_logger():
     # Set up basic logging as per https://discordpy.readthedocs.io/en/latest/logging.html#logging-setup
-    logger = logging.getLogger('discord')
+    logger = logging.getLogger()  # 'discord')
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='a')
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     logger.addHandler(handler)
 

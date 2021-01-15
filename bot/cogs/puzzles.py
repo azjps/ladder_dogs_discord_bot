@@ -75,7 +75,7 @@ class Puzzles(commands.Cog):
                 puzzle_name = arg
             return await self.create_puzzle_channel(ctx, category.name, puzzle_name)
 
-        if not self.check_is_bot_channel(ctx):
+        if not (await self.check_is_bot_channel(ctx)):
             return
 
         if ":" in arg:
@@ -87,7 +87,7 @@ class Puzzles(commands.Cog):
     @commands.command(aliases=["r"])
     async def round(self, ctx, *, arg):
         """*Create new puzzle round: !r round-name*"""
-        if not self.check_is_bot_channel(ctx):
+        if not (await self.check_is_bot_channel(ctx)):
             return
 
         category_name = self.clean_name(arg)
@@ -124,7 +124,7 @@ class Puzzles(commands.Cog):
     @commands.command(aliases=["list"])
     async def list_puzzles(self, ctx):
         """*List all puzzles and their statuses*"""
-        if not self.check_is_bot_channel(ctx):
+        if not (await self.check_is_bot_channel(ctx)):
             return
 
         all_puzzles = PuzzleJsonDb.get_all(ctx.guild.id)
@@ -552,7 +552,7 @@ class Puzzles(commands.Cog):
         
         Done automatically on task loop, so this is only useful for debugging
         """
-        if not self.check_is_bot_channel(ctx):
+        if not (await self.check_is_bot_channel(ctx)):
             return
         puzzles_to_archive = await self.archive_solved_puzzles(ctx.guild)
         mentions = " ".join([p.channel_mention for p in puzzles_to_archive])
