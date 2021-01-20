@@ -277,6 +277,7 @@ class Puzzles(commands.Cog):
         try:
             return PuzzleJsonDb.get(guild_id, puzzle_name, round_name)
         except MissingPuzzleError:
+            print(f"Unable to retrieve {puzzle_name}")
             return None
 
     @commands.command()

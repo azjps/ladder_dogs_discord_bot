@@ -30,7 +30,7 @@ def main():
 
         if existing_paths:
             existing = "\n".join([str(p) for p in existing_paths])
-            y_or_n = input(f"The following files will be overwritten. Proceed? [y/N]:\n{existing}")
+            y_or_n = input(f"The following files will be overwritten:\n{existing}\nProceed? [y/N] ")
             if y_or_n.lower() == "n":
                 return
 
