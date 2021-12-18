@@ -41,7 +41,7 @@ async def on_ready():
     # bot.guild_data = await preload_guild_data()
     guild_names = [g.name for g in bot.guilds]
     guild_ids = [g.id for g in bot.guilds]
-    
+
     print(
         f"""Logged in as {bot.user}..
         Serving {len(bot.users)} users in {len(bot.guilds)} guilds: {guild_names} {guild_ids}
@@ -50,10 +50,10 @@ async def on_ready():
     )
 
 
-def setup_logger():
+def setup_logger(log_level=logging.INFO):
     # Set up basic logging as per https://discordpy.readthedocs.io/en/latest/logging.html#logging-setup
     logger = logging.getLogger()  # 'discord')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(log_level)
     handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='a')
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     logger.addHandler(handler)

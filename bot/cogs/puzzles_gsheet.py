@@ -66,9 +66,15 @@ class GoogleSheets(commands.Cog):
             PuzzleJsonDb.commit(puzzle)
 
             # inform spreadsheet creation
-            url = urls.spreadsheet_url(spreadsheet.id)
+            puzzle_url = puzzle.hunt_url
+            sheet_url = urls.spreadsheet_url(spreadsheet.id)
+            emoji = GuildSettingsDb.get_cached(guild_id).discord_bot_emoji
             embed = discord.Embed(
-                description=f":ladder: :dog: I've created a spreadsheet for you at {url} Check out the `Quick Links` tab for more info!"
+                description=
+                f"{emoji} I've created a spreadsheet for you at {sheet_url}. "
+                f"Check out the `Quick Links` tab for more info! "
+                # NOTE: This next sentence might be better elsewhere, for now easy enough to add message here.
+                f"I've assumed the puzzle page is {puzzle_url}, use `!link` to update if needed."
             )
             await text_channel.send(embed=embed)
 

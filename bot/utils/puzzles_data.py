@@ -23,10 +23,12 @@ class MissingPuzzleError(RuntimeError):
 class PuzzleData:
     name: str
     round_name: str
+    round_id: int = 0  # round = category channel
     guild_id: int = 0
     guild_name: str = ""
-    channel_id: int = ""
+    channel_id: int = 0
     channel_mention: str = ""
+    voice_channel_id: int = 0
     # archive_channel_id: str = ""
     archive_channel_mention: str = ""
     hunt_url: str = ""
@@ -44,7 +46,7 @@ class PuzzleData:
     @classmethod
     def sort_by_round_start(cls, puzzles: list) -> list:
         """Return list of PuzzleData objects sorted by start of round time
-        
+
         Groups puzzles in the same round together, and sorts puzzles within round
         by start_time.
         """
@@ -66,20 +68,32 @@ class _PuzzleJsonDb:
     def __init__(self, dir_path: Path):
         self.dir_path = dir_path
 
-    def puzzle_path(self, puzzle, round_name=None, guild_id=None) -> Path:
+    def puzzle_path(self, puzzle, round_id=None, guild_id=None) -> Path:
+        """Store puzzle metadata to the path `guild/category/puzzle.json`
+
+        Use unique ASCII ids (e.g. the discord id snowflakes) for each part of the
+        path, to avoid potential shenanigans with unicode handling.
+
+        Note:
+            For convenience, with the Google Drive cog, the relative path
+            to the puzzle metadata file will be saved in a column in the nexus
+            spreadsheet.
+        """
         if isinstance(puzzle, PuzzleData):
-            puzzle_name = puzzle.name
-            round_name = puzzle.round_name
+            puzzle_id = puzzle.channel_id
+            round_id = puzzle.round_id
             guild_id = puzzle.guild_id
-        elif isinstance(puzzle, str):
-            puzzle_name = puzzle
-            if round_name is None or guild_id is None:
-                raise ValueError(f"round_name / guild_id not passed for puzzle {puzzle}")
+        elif isinstance(puzzle, (int, str)):
+            puzzle_id = puzzle
+            if round_id is None or guild_id is None:
+                raise ValueError(f"round_id / guild_id not passed for puzzle {puzzle}")
         else:
             raise ValueError(f"Unknown puzzle type: {type(puzzle)} for {puzzle}")
-        return (self.dir_path / str(guild_id) / round_name / puzzle_name).with_suffix(".json")
+        # TODO: Database would be better here .. who wants to sort through puzzle metadata by these ids?
+        return (self.dir_path / str(guild_id) / str(round_id) / str(puzzle_id)).with_suffix(".json")
 
     def commit(self, puzzle_data):
+        """Update puzzle metadata file"""
         puzzle_path = self.puzzle_path(puzzle_data)
         puzzle_path.parent.parent.mkdir(exist_ok=True)
         puzzle_path.parent.mkdir(exist_ok=True)
@@ -93,14 +107,14 @@ class _PuzzleJsonDb:
         except IOError:
             pass
 
-    def get(self, guild_id, puzzle_name, round_name) -> PuzzleData:
+    def get(self, guild_id, puzzle_id, round_id) -> PuzzleData:
         try:
-            with self.puzzle_path(puzzle_name, round_name=round_name, guild_id=guild_id).open() as fp:
+            with self.puzzle_path(puzzle_id, round_id=round_id, guild_id=guild_id).open() as fp:
                 return PuzzleData.from_json(fp.read())
         except (IOError, OSError) as exc:
             # can also just catch FileNotFoundError
             if exc.errno == errno.ENOENT:
-                raise MissingPuzzleError(f"Unable to find puzzle {puzzle_name} for {round_name}")
+                raise MissingPuzzleError(f"Unable to find puzzle {puzzle_id} for {round_id}")
             raise
 
     def get_all(self, guild_id) -> List[PuzzleData]:
@@ -114,7 +128,8 @@ class _PuzzleJsonDb:
                 logger.exception(f"Unable to load puzzle data from {path}")
         return PuzzleData.sort_by_round_start(puzzle_datas)
 
-    def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta=False) -> List[PuzzleData]:
+    def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta=False, minutes=5) -> List[PuzzleData]:
+        """Returns list of all solved but unarchived puzzles"""
         all_puzzles = self.get_all(guild_id)
         now = now or datetime.datetime.now(tz=pytz.UTC)
         puzzles_to_archive = []
@@ -127,12 +142,16 @@ class _PuzzleJsonDb:
                 continue
             if puzzle.status == "solved" and puzzle.solve_time is not None:
                 # found a solved puzzle
-                if now - puzzle.solve_time > datetime.timedelta(minutes=5):
+                if now - puzzle.solve_time > datetime.timedelta(minutes=minutes):
                     # enough time has passed, archive the channel
                     puzzles_to_archive.append(puzzle)
         return puzzles_to_archive
 
     def aggregate_json(self) -> dict:
+        """Aggregate all puzzle metadata into a single JSON object, for convenience
+
+        Might be handy with a JSON viewer such as `IPython.display.JSON`.
+        """
         paths = self.dir_path.rglob(f"*/*.json")
         result = {}
         for path in paths:

@@ -8,7 +8,7 @@ import pytz
 
 from bot.utils import urls
 from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
-from bot.utils.puzzle_settings import GuildSettingsDb
+from bot.utils.puzzle_settings import GuildSettings, GuildSettingsDb
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class Puzzles(commands.Cog):
     @commands.command(aliases=["p"])
     async def puzzle(self, ctx, *, arg):
         """*Create new puzzle channels: !p round-name: puzzle-name*
-        
+
         Can be posted in either a #meta channel or the bot channel
         """
         guild = ctx.guild
@@ -100,6 +100,14 @@ class Puzzles(commands.Cog):
 
         await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
 
+    @classmethod
+    def get_guild_settings_from_ctx(cls, ctx, use_cached: bool = True) -> GuildSettings:
+        guild_id = ctx.guild.id
+        if use_cached:
+            return GuildSettingsDb.get_cached(guild_id)
+        else:
+            return GuildSettingsDb.get(guild_id)
+
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def show_settings(self, ctx):
@@ -129,24 +137,32 @@ class Puzzles(commands.Cog):
             return
 
         all_puzzles = PuzzleJsonDb.get_all(ctx.guild.id)
-        # TODO: this is very primitive
+        all_puzzles = PuzzleData.sort_by_round_start(all_puzzles)
+
+        embed = discord.Embed()
+        cur_round = None
         message = ""
+        # Create a message with a new embed field per round,
+        # listing all puzzles in the embed field
         for puzzle in all_puzzles:
-            message += f"{puzzle.round_name} {puzzle.channel_mention}"
+            if cur_round is None:
+                cur_round = puzzle.round_name
+            if puzzle.round_name != cur_round:
+                # Reached next round, add new embed field
+                embed.add_field(name=cur_round, value=message)
+                cur_round = puzzle.round_name
+                message = ""
+            message += f"{puzzle.channel_mention}"
             if puzzle.puzzle_type:
                 message += f" type:{puzzle.puzzle_type}"
             if puzzle.solution:
-                message += f" solution:**{puzzle.solution}**"
+                message += f" sol:**{puzzle.solution}**"
             elif puzzle.status:
                 message += f" status:{puzzle.status}"
             message += "\n"
 
-        embed = discord.Embed()
-        embed.add_field(
-            name="Puzzles",
-            value=message,
-        )
-        await ctx.send(embed=embed)
+        if embed.fields:
+            await ctx.send(embed=embed)
 
     async def get_or_create_channel(
         self, guild, category: discord.CategoryChannel, channel_name: str, channel_type, **kwargs
@@ -173,6 +189,11 @@ class Puzzles(commands.Cog):
         return (channel, created)
 
     async def create_puzzle_channel(self, ctx, round_name: str, puzzle_name: str):
+        """Create new text channel for puzzle, and optionally a voice channel
+
+        Save puzzle metadata to data_dir, send initial messages to channel, and
+        create corresponding Google Sheet if GoogleSheets cog is set up.
+        """
         guild = ctx.guild
         category_name = self.clean_name(round_name)
         category = discord.utils.get(guild.categories, name=category_name)
@@ -183,17 +204,18 @@ class Puzzles(commands.Cog):
         text_channel, created_text = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=channel_name, channel_type="text", reason=self.PUZZLE_REASON
         )
+        settings = GuildSettingsDb.get_cached(guild.id)
         if created_text:
             puzzle_data = PuzzleData(
                 name=channel_name,
                 round_name=category_name,
+                round_id=category.id,
                 guild_name=guild.name,
                 guild_id=guild.id,
                 channel_mention=text_channel.mention,
                 channel_id=text_channel.id,
                 start_time=datetime.datetime.now(tz=pytz.UTC),
             )
-            settings = GuildSettingsDb.get_cached(guild.id)
             if settings.hunt_url:
                 # NOTE: this is a heuristic and may need to be updated!
                 # This is based on last year's URLs, where the URL format was
@@ -209,18 +231,33 @@ class Puzzles(commands.Cog):
             await self.send_initial_puzzle_channel_messages(text_channel)
 
             gsheet_cog = self.bot.get_cog("GoogleSheets")
-            print("google sheets cog:", gsheet_cog)
+            # print("google sheets cog:", gsheet_cog)
             if gsheet_cog is not None:
                 # update google sheet ID
                 await gsheet_cog.create_puzzle_spreadsheet(text_channel, puzzle_data)
+        else:
+            puzzle_data = self.get_puzzle_data_from_channel(text_channel)
 
-        voice_channel, created_voice = await self.get_or_create_channel(
-            guild=guild, category=category, channel_name=channel_name, channel_type="voice", reason=self.PUZZLE_REASON
-        )
+        created_voice = False
+        if settings.discord_use_voice_channels:
+            voice_channel, created_voice = await self.get_or_create_channel(
+                guild=guild, category=category, channel_name=channel_name, channel_type="voice", reason=self.PUZZLE_REASON
+            )
+            if created_voice:
+                puzzle_data.voice_channel_id = voice_channel.id
+                PuzzleJsonDb.commit(puzzle_data)
+
         created = created_text or created_voice
         if created:
+            if created_text and created_voice:
+                created_desc = "text and voice"  # I'm sure there's a more elegant way to do this ..
+            elif created_text:
+                created_desc = "text"
+            elif created_voice:
+                created_desc = "voice"
+
             await ctx.send(
-                f":white_check_mark: I've created new puzzle text and voice channels for {category.mention}: {text_channel.mention}"
+                f":white_check_mark: I've created new puzzle {created_desc} channels for {category.mention}: {text_channel.mention}"
             )
         else:
             await ctx.send(
@@ -260,24 +297,26 @@ class Puzzles(commands.Cog):
     async def send_not_puzzle_channel(self, ctx):
         if ctx.channel and ctx.channel.category.name == self.SOLVED_PUZZLES_CATEGORY:
             await ctx.send("This puzzle appears to already be solved")
-        else:    
+        else:
             await ctx.send("This does not appear to be a puzzle channel")
 
     def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
         """Extract puzzle data based on the channel name and category name
-        
+
         Looks up the corresponding JSON data
         """
         if not channel.category:
             return None
 
         guild_id = channel.guild.id
+        round_id = channel.category.id
         round_name = channel.category.name
+        puzzle_id = channel.id
         puzzle_name = channel.name
         try:
-            return PuzzleJsonDb.get(guild_id, puzzle_name, round_name)
+            return PuzzleJsonDb.get(guild_id, puzzle_id, round_id)
         except MissingPuzzleError:
-            print(f"Unable to retrieve {puzzle_name}")
+            print(f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}")
             return None
 
     @commands.command()
@@ -431,7 +470,7 @@ class Puzzles(commands.Cog):
     #     if not puzzle_data:
     #         await self.send_not_puzzle_channel(ctx)
     #         return
-    # 
+    #
     #     embed = discord.Embed(description=f"""Resources: """)
     #     await ctx.send(embed=embed)
 
@@ -449,8 +488,9 @@ class Puzzles(commands.Cog):
         puzzle_data.solve_time = datetime.datetime.now(tz=pytz.UTC)
         PuzzleJsonDb.commit(puzzle_data)
 
+        emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
         embed = discord.Embed(
-            description=f":ladder: :dog: :partying_face: Great work! Marked the solution as `{solution}`"
+            description=f"{emoji} :partying_face: Great work! Marked the solution as `{solution}`"
         )
         embed.add_field(
             name="Follow-up",
@@ -474,8 +514,9 @@ class Puzzles(commands.Cog):
         puzzle_data.solve_time = None
         PuzzleJsonDb.commit(puzzle_data)
 
+        emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
         embed = discord.Embed(
-            description=f":ladder: :dog: Alright, I've unmarked {prev_solution} as the solution. "
+            description=f"{emoji} Alright, I've unmarked {prev_solution} as the solution. "
             "You'll get'em next time!"
         )
         await ctx.send(embed=embed)
@@ -514,7 +555,7 @@ class Puzzles(commands.Cog):
     #     payload: discord.RawReactionActionEvent = await bot.wait_for(
     #         "raw_reaction_add", timeout=self.active_time, check=check
     #     )
-        
+
     @commands.command()
     async def debug_puzzle_channel(self, ctx):
         """*(admin) See puzzle metadata*"""
@@ -543,7 +584,7 @@ class Puzzles(commands.Cog):
             raise ValueError(
                 f"{solved_category_name} category does not exist; available categories: {avail_categories}"
             )
-        
+
         gsheet_cog = self.bot.get_cog("GoogleSheets")
 
         for puzzle in puzzles_to_archive:
@@ -570,7 +611,7 @@ class Puzzles(commands.Cog):
     @commands.command()
     async def archive_solved(self, ctx):
         """*(admin) Archive solved puzzles. Done automatically*
-        
+
         Done automatically on task loop, so this is only useful for debugging
         """
         if not (await self.check_is_bot_channel(ctx)):
@@ -585,12 +626,15 @@ class Puzzles(commands.Cog):
     async def archived_solved_puzzles_loop(self):
         """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
         for guild in self.bot.guilds:
-            await self.archive_solved_puzzles(guild)
+            try:
+                await self.archive_solved_puzzles(guild)
+            except Exception:
+                logger.exception("Unable to archive solved puzzles for guild {guild.id} {guild.name}")
 
     @archived_solved_puzzles_loop.before_loop
     async def before_archiving(self):
         await self.bot.wait_until_ready()
-        print("Ready to start archiving solved puzzles")
+        logger.info("Ready to start archiving solved puzzles")
 
 def setup(bot):
     bot.add_cog(Puzzles(bot))

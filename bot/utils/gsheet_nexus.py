@@ -27,6 +27,7 @@ COLUMNS = [
     "notes",
     "start_time",
     "solve_time",
+    "data_path",
 ]
 
 
@@ -50,6 +51,9 @@ async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_i
         for column in COLUMNS:
             if column == "google_sheet_url" and puzzle.google_sheet_id:
                 cell_range[cell_index].value = urls.spreadsheet_url(puzzle.google_sheet_id)
+            elif column == "data_path":
+                # Convenience for bot administrator to get path to puzzle metadata json
+                cell_range[cell_index].value = f"{puzzle.guild_id}/{puzzle.round_id}/{puzzle.channel_id}.json"
             else:
                 cell_range[cell_index].value = str(getattr(puzzle, column, ""))
             cell_index += 1
