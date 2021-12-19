@@ -24,6 +24,7 @@ class PuzzleData:
     name: str
     round_name: str
     round_id: int = 0  # round = category channel
+    solved_round_id: int = 0
     guild_id: int = 0
     guild_name: str = ""
     channel_id: int = 0
@@ -63,6 +64,8 @@ class PuzzleData:
 
         return sorted(puzzles, key=lambda p: (round_start_times.get(p.round_name, 0), p.start_time or 0))
 
+    def is_solved(self):
+        return self.status == "solved" and self.solve_time is not None
 
 class _PuzzleJsonDb:
     def __init__(self, dir_path: Path):
@@ -128,7 +131,7 @@ class _PuzzleJsonDb:
                 logger.exception(f"Unable to load puzzle data from {path}")
         return PuzzleData.sort_by_round_start(puzzle_datas)
 
-    def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta=False, minutes=5) -> List[PuzzleData]:
+    def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta: bool = False, minutes: Optional[int] = 5) -> List[PuzzleData]:
         """Returns list of all solved but unarchived puzzles"""
         all_puzzles = self.get_all(guild_id)
         now = now or datetime.datetime.now(tz=pytz.UTC)
@@ -140,8 +143,10 @@ class _PuzzleJsonDb:
             if puzzle.name == "meta" and not include_meta:
                 # we usually do not want to archive meta channels, only do manually
                 continue
-            if puzzle.status == "solved" and puzzle.solve_time is not None:
+            if puzzle.is_solved():
                 # found a solved puzzle
+                if minutes is None:
+                    minutes = 5  # default to archiving puzzles that have been solved for 5 minutes. Un-hard-code?
                 if now - puzzle.solve_time > datetime.timedelta(minutes=minutes):
                     # enough time has passed, archive the channel
                     puzzles_to_archive.append(puzzle)

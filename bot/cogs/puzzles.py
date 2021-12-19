@@ -18,7 +18,7 @@ class Puzzles(commands.Cog):
     META_REASON = "bot-meta"
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
-    SOLVED_PUZZLES_CATEGORY = "SOLVED PUZZLES"  # TODO: this should be a guild setting
+    SOLVED_PUZZLES_CATEGORY_PREFIX = "SOLVED-"
     PRIORITIES = ["low", "medium", "high", "very high"]
 
     def __init__(self, bot):
@@ -94,7 +94,7 @@ class Puzzles(commands.Cog):
         guild = ctx.guild
         category = discord.utils.get(guild.categories, name=category_name)
         if not category:
-            print(f"Creating a new channel category for round: {category_name}")
+            logger.info(f"Creating a new channel category for round: {category_name}")
             # TODO: debug position?
             category = await guild.create_category(category_name, position=len(guild.categories) - 2)
 
@@ -295,10 +295,7 @@ class Puzzles(commands.Cog):
         await channel.send(embed=embed)
 
     async def send_not_puzzle_channel(self, ctx):
-        if ctx.channel and ctx.channel.category.name == self.SOLVED_PUZZLES_CATEGORY:
-            await ctx.send("This puzzle appears to already be solved")
-        else:
-            await ctx.send("This does not appear to be a puzzle channel")
+        await ctx.send("This does not appear to be a puzzle channel")
 
     def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
         """Extract puzzle data based on the channel name and category name
@@ -308,7 +305,8 @@ class Puzzles(commands.Cog):
         if not channel.category:
             return None
 
-        guild_id = channel.guild.id
+        guild = channel.guild
+        guild_id = guild.id
         round_id = channel.category.id
         round_name = channel.category.name
         puzzle_id = channel.id
@@ -316,7 +314,18 @@ class Puzzles(commands.Cog):
         try:
             return PuzzleJsonDb.get(guild_id, puzzle_id, round_id)
         except MissingPuzzleError:
-            print(f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}")
+            # Not the cleanest, just try to guess the original category id
+            # A DB would be useful here, then can directly query on solved_channel_id ..
+            if round_name.startswith(self.SOLVED_PUZZLES_CATEGORY_PREFIX):
+                og_round_name = round_name[len(self.SOLVED_PUZZLES_CATEGORY_PREFIX):]
+                og_round = discord.utils.get(guild.categories, name=og_round_name)
+                if og_round:
+                    try:
+                        return PuzzleJsonDb.get(guild_id, puzzle_id, og_round.id)
+                    except MissingPuzzleError:
+                        pass
+
+            logger.error(f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}")
             return None
 
     @commands.command()
@@ -335,6 +344,12 @@ class Puzzles(commands.Cog):
         if not puzzle_data:
             await self.send_not_puzzle_channel(ctx)
             return
+
+        if puzzle_data.is_solved():
+            await ctx.send(
+                 ":warning: Please note that this puzzle has already been marked as solved, "
+                 f"with solution `{puzzle_data.solution}`"
+            )
 
         message = message or attr
         if value:
@@ -566,57 +581,83 @@ class Puzzles(commands.Cog):
 
         await ctx.channel.send(f"```json\n{puzzle_data.to_json()}```")
 
-    async def archive_solved_puzzles(self, guild: discord.Guild) -> List[PuzzleData]:
+    async def delete_voice_channel(self, guild: discord.Guild, puzzle: PuzzleData):
+        """If found, delete associated voice channel"""
+        voice_channel = None
+        if puzzle.voice_channel_id:
+            voice_channel = discord.utils.get(
+                guild.channels, type=discord.ChannelType.voice, id=puzzle.voice_channel_id
+            )
+        if not voice_channel:
+            voice_channel = discord.utils.get(
+                guild.channels, type=discord.ChannelType.voice, name=puzzle.name
+            )
+
+        if voice_channel:
+            await voice_channel.delete()
+
+    async def get_or_create_solved_category(self, guild: discord.Guild, puzzle: PuzzleData) -> discord.CategoryChannel:
+        solved_category = None
+        if puzzle.solved_round_id:
+            solved_category = discord.utils.get(guild.categories, id=puzzle.solved_round_id)
+
+        if not solved_category:
+            solved_category_name = self.SOLVED_PUZZLES_CATEGORY_PREFIX + puzzle.round_name
+            solved_category = discord.utils.get(guild.categories, name=solved_category_name)
+
+        if not solved_category:
+            # TODO: debug position?
+            position = len(guild.categories) - 1
+            open_category = discord.utils.get(guild.categories, id=puzzle.round_id)
+            if open_category:
+                position = open_category.position
+
+            logger.info(
+                f"Creating a new channel category for solved puzzles in round: {solved_category_name}"
+                f" at position {position}"
+            )
+            solved_category = await guild.create_category(solved_category_name, position=position)
+
+        return solved_category
+
+    async def archive_solved_puzzles(self, guild: discord.Guild, minutes: Optional[int] = None) -> List[PuzzleData]:
         """Archive puzzles for which sufficient time has elapsed since solve time
 
         Move them to a solved-puzzles channel category, and rename spreadsheet
         to start with the text [SOLVED]
         """
-        puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive(guild.id)
-        # need to stash guild as a botvar:
-        # https://stackoverflow.com/questions/64676968/how-to-use-context-within-discord-ext-tasks-loop-in-discord-py
-        # channel = .get(channel)
-        # TODO: read this from config?
-        solved_category_name = self.SOLVED_PUZZLES_CATEGORY
-        solved_category = discord.utils.get(guild.categories, name=solved_category_name)
-        if not solved_category:
-            avail_categories = [c.name for c in guild.categories]
-            raise ValueError(
-                f"{solved_category_name} category does not exist; available categories: {avail_categories}"
-            )
-
+        puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive(guild.id, minutes=minutes)
         gsheet_cog = self.bot.get_cog("GoogleSheets")
 
         for puzzle in puzzles_to_archive:
+            solved_category = await self.get_or_create_solved_category(guild, puzzle)
+
             channel = discord.utils.get(
                 guild.channels, type=discord.ChannelType.text, id=puzzle.channel_id
             )
             if channel:
                 await channel.edit(category=solved_category)
 
-            voice_channel = discord.utils.get(
-                guild.channels, type=discord.ChannelType.voice, name=puzzle.name
-            )
-            if voice_channel:
-                await voice_channel.delete()
+            await self.delete_voice_channel(guild, puzzle)
 
             if gsheet_cog:
                 await gsheet_cog.archive_puzzle_spreadsheet(puzzle)
 
             puzzle.archive_time = datetime.datetime.now(tz=pytz.UTC)
-            puzzle.archive_channel_mention = channel.mention
+            puzzle.archive_channel_mention = channel.mention if channel else None
+            puzzle.solved_round_id = solved_category.id
             PuzzleJsonDb.commit(puzzle)
         return puzzles_to_archive
 
     @commands.command()
-    async def archive_solved(self, ctx):
+    async def archive_solved(self, ctx, *, minutes: Optional[int]):
         """*(admin) Archive solved puzzles. Done automatically*
 
         Done automatically on task loop, so this is only useful for debugging
         """
         if not (await self.check_is_bot_channel(ctx)):
             return
-        puzzles_to_archive = await self.archive_solved_puzzles(ctx.guild)
+        puzzles_to_archive = await self.archive_solved_puzzles(ctx.guild, minutes=minutes)
         mentions = " ".join([p.channel_mention for p in puzzles_to_archive])
         message = f"Archived {len(puzzles_to_archive)} solved puzzle channels: {mentions}"
         logger.info(message)
