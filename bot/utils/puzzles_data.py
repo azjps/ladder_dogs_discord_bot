@@ -121,7 +121,7 @@ class _PuzzleJsonDb:
             raise
 
     def get_all(self, guild_id) -> List[PuzzleData]:
-        paths = self.dir_path.rglob(f"{guild_id}/*/*.json")
+        paths = self.dir_path.glob(f"{guild_id}/*/*.json")
         puzzle_datas = []
         for path in paths:
             try:
