@@ -3,6 +3,7 @@ import logging
 from typing import List, Optional
 
 import discord
+from discord.channel import VoiceChannel
 from discord.ext import commands, tasks
 import pytz
 
@@ -538,7 +539,7 @@ class Puzzles(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
-    async def delete(self, ctx):
+    async def delete_now(self, ctx):
         """*(admin) Permanently delete a channel*"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
@@ -562,6 +563,59 @@ class Puzzles(commands.Cog):
         # delete text channel last so that errors can be reported
         await ctx.channel.delete(reason=self.DELETE_REASON)
 
+    @commands.command()
+    @commands.has_permissions(manage_channels=True)
+    async def delete_all(self, ctx, base_url: str, dry_run: bool = True):
+        """*(admin) Permanently delete a channel*
+
+        The current syntax is `!delete_all {base_url:str} {dry_run:bool}`
+        and will delete all puzzle channels whose puzzle URL starts with `base_url`.
+        """
+        # Ideally in the future we would use a stricter identifier for hunt
+        # instead of base_url. For now just a simple check that not inputting
+        # an empty string.
+        if not base_url or len(base_url) <= len("https://"):
+            logger.error("base_url required for delete_all")
+            await ctx.send(f":exclamation: base_url required for delete_all")
+            return
+
+        puzzles = PuzzleJsonDb.get_all(ctx.guild.id)
+        # TODO: use a hunt identifier instead
+        puzzles_found = [p for p in puzzles if p.hunt_url.startswith(base_url)]
+        if not puzzles_found:
+            await ctx.send(f":exclamation: No puzzles found for {base_url}")
+            return
+
+        # TODO: how to confirm deletions?
+        await self.confirm_delete_all(ctx, puzzles_found, dry_run=dry_run)
+
+    async def confirm_delete_all(self, ctx, puzzles: List[PuzzleData], dry_run: bool = False):
+        """Actually delete puzzles and channels"""
+        for puzzle in puzzles:
+            try:
+                reason = "delete all puzzles from hunt"
+
+                # delete text channel last so that errors can be reported
+                text_channel = discord.utils.get(
+                    ctx.guild.channels, type=discord.ChannelType.text, id=puzzle.channel_id
+                )
+                if dry_run:
+                    logger.info(f"Deleting puzzle {puzzle.round_name}:{puzzle.name} {puzzle.channel_id}, found text_channel: {text_channel}")
+                else:
+                    await self.delete_voice_channel(ctx.guild, puzzle, reason=reason)
+
+                    if text_channel:
+                        try:
+                            await text_channel.delete(reason=reason)
+                        except discord.errors.NotFound:
+                            logger.exception(f"Unable to delete text_channel {text_channel} for puzzle {puzzle.to_json()}")
+                    # TODO: delete json entries too?
+                    # PuzzleJsonDb.delete(puzzle)
+            except Exception:
+                logger.exception(f"Unable to delete puzzle: {puzzle.to_json()}")
+
+        await ctx.send(f"Deleted {len(puzzles)} puzzle channels")
+
     # async def confirm_delete(self, ctx):
     #     ref: https://github.com/stroupbslayen/discord-pretty-help/blob/master/pretty_help/pretty_help.py
     #     embed = discord.Embed(description="Are you sure you wish to delete this channel? All of this channel's contents will be permanently deleted.")
@@ -581,9 +635,9 @@ class Puzzles(commands.Cog):
 
         await ctx.channel.send(f"```json\n{puzzle_data.to_json()}```")
 
-    async def delete_voice_channel(self, guild: discord.Guild, puzzle: PuzzleData):
+    async def delete_voice_channel(self, guild: discord.Guild, puzzle: PuzzleData, reason: Optional[str] = None):
         """If found, delete associated voice channel"""
-        voice_channel = None
+        voice_channel : Optional[discord.VoiceChannel] = None
         if puzzle.voice_channel_id:
             voice_channel = discord.utils.get(
                 guild.channels, type=discord.ChannelType.voice, id=puzzle.voice_channel_id
@@ -594,7 +648,10 @@ class Puzzles(commands.Cog):
             )
 
         if voice_channel:
-            await voice_channel.delete()
+            try:
+                await voice_channel.delete(reason=reason)
+            except discord.errors.NotFound:
+                logger.exception(f"Unable to find voice channel to delete: {voice_channel} for puzzle {puzzle.to_json()}")
 
     async def get_or_create_solved_category(self, guild: discord.Guild, puzzle: PuzzleData) -> discord.CategoryChannel:
         solved_category = None
@@ -606,7 +663,6 @@ class Puzzles(commands.Cog):
             solved_category = discord.utils.get(guild.categories, name=solved_category_name)
 
         if not solved_category:
-            # TODO: debug position?
             position = len(guild.categories) - 1
             open_category = discord.utils.get(guild.categories, id=puzzle.round_id)
             if open_category:
@@ -627,6 +683,7 @@ class Puzzles(commands.Cog):
         to start with the text [SOLVED]
         """
         puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive(guild.id, minutes=minutes)
+        # logger.info(f"Found {len(puzzles_to_archive)} to archive: {puzzles_to_archive}")
         gsheet_cog = self.bot.get_cog("GoogleSheets")
 
         for puzzle in puzzles_to_archive:
@@ -638,7 +695,7 @@ class Puzzles(commands.Cog):
             if channel:
                 await channel.edit(category=solved_category)
 
-            await self.delete_voice_channel(guild, puzzle)
+            await self.delete_voice_channel(guild, puzzle, reason="archiving solved puzzle")
 
             if gsheet_cog:
                 await gsheet_cog.archive_puzzle_spreadsheet(puzzle)
