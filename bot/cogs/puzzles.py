@@ -581,9 +581,9 @@ class Puzzles(commands.Cog):
             logger.info(f"Un-scheduling deletion for puzzle: {puzzle_data.to_json()}")
 
             emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
-            ctx.send(f"{emoji} Noted, will no longer be deleting this channel.")
+            await ctx.send(f"{emoji} Noted, will no longer be deleting this channel.")
         else:
-            ctx.send(f":exclamation: Channel isn't being deleted, nothing to undelete")
+            await ctx.send(f":exclamation: Channel isn't being deleted, nothing to undelete")
 
     async def cleanup_deleted_puzzles(self, guild: discord.Guild):
         """Archive puzzles for which sufficient time has elapsed since solve time
