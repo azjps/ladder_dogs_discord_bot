@@ -538,6 +538,74 @@ class Puzzles(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
+    async def delete(self, ctx):
+        """*Permanently delete a channel, after a timeout*"""
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
+            return
+
+        if puzzle_data.solution:
+            raise ValueError("Unable to delete a solved puzzle channel, please contact discord admins if needed")
+
+        puzzle_data.status = "deleting"
+        puzzle_data.delete_time = datetime.datetime.now(tz=pytz.UTC)
+        PuzzleJsonDb.commit(puzzle_data)
+
+        emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
+        embed = discord.Embed(
+            description=f"{emoji} :recycle: Okay, I will permanently delete this channel in ~5 minutes."
+        )
+        embed.add_field(
+            name="Follow-up",
+            value="If you didn't mean to delete this channel, please message `!undelete`. "
+            "Otherwise, in around 5 minutes, I will automatically delete this "
+            "puzzle channel.",
+        )
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def undelete(self, ctx):
+        """*Prevent channel from getting deleted before timeout*"""
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
+            return
+
+        if puzzle_data.status == "deleting" or puzzle_data.delete_time is not None:
+            puzzle_data.status = ""
+            puzzle_data.delete_time = None
+            PuzzleJsonDb.delete(puzzle_data)
+        else:
+            ctx.send(f":exclamation: Channel isn't being deleted, nothing to undelete")
+
+    async def cleanup_deleted_puzzles(self, guild: discord.Guild):
+        """Archive puzzles for which sufficient time has elapsed since solve time
+
+        Move them to a solved-puzzles channel category, and rename spreadsheet
+        to start with the text [SOLVED]
+        """
+        puzzles_to_delete = PuzzleJsonDb.get_puzzles_to_delete(guild.id)
+
+        delete_reason = "User requested deletion"
+        for puzzle in puzzles_to_delete:
+            assert (
+                puzzle.delete_time is not None
+                and puzzle.solve_time is None
+                and puzzle.archive_time is None
+            )
+            logger.info(f"Deleting puzzle: {puzzle.to_json()}")
+
+            await self.delete_voice_channel(guild, puzzle, reason=delete_reason)
+
+            text_channel = discord.utils.get(
+                guild.channels, type=discord.ChannelType.text, id=puzzle.channel_id
+            )
+            PuzzleJsonDb.delete(puzzle)
+            # delete text channel last so that errors can be reported
+            await text_channel.delete(reason=self.DELETE_REASON)
+
+    @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def delete_now(self, ctx):
         """*(admin) Permanently delete a channel*"""
@@ -553,13 +621,12 @@ class Puzzles(commands.Cog):
         category = channel.category
 
         # TODO: need to confirm deletion first!
-
-        PuzzleJsonDb.delete(puzzle_data)
         voice_channel = discord.utils.get(
             ctx.guild.channels, category=category, type=discord.ChannelType.voice, name=channel.name
         )
         if voice_channel:
             await voice_channel.delete(reason=self.DELETE_REASON)
+        PuzzleJsonDb.delete(puzzle_data)
         # delete text channel last so that errors can be reported
         await ctx.channel.delete(reason=self.DELETE_REASON)
 
@@ -728,6 +795,10 @@ class Puzzles(commands.Cog):
                 await self.archive_solved_puzzles(guild)
             except Exception:
                 logger.exception("Unable to archive solved puzzles for guild {guild.id} {guild.name}")
+            try:
+                await self.cleanup_deleted_puzzles(guild)
+            except Exception:
+                logger.exception("Unable to delete puzzles for guild {guild.id} {guild.name}")
 
     @archived_solved_puzzles_loop.before_loop
     async def before_archiving(self):
