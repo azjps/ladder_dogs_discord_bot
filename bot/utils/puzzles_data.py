@@ -43,6 +43,7 @@ class PuzzleData:
     start_time: Optional[datetime.datetime] = None
     solve_time: Optional[datetime.datetime] = None
     archive_time: Optional[datetime.datetime] = None
+    delete_time: Optional[datetime.datetime] = None
 
     @classmethod
     def sort_by_round_start(cls, puzzles: list) -> list:
@@ -151,6 +152,27 @@ class _PuzzleJsonDb:
                     # enough time has passed, archive the channel
                     puzzles_to_archive.append(puzzle)
         return puzzles_to_archive
+
+    def get_puzzles_to_delete(self, guild_id: int, include_meta: bool = False) -> List[PuzzleData]:
+        """Return list of puzzles to delete"""
+        all_puzzles = self.get_all(guild_id)
+        now = datetime.datetime.now(tz=pytz.UTC)
+        puzzles_to_delete = []
+        for puzzle in all_puzzles:
+            if puzzle.archive_time is not None:
+                # already archived
+                continue
+            if puzzle.name == "meta" and not include_meta:
+                # we usually do not want to archive meta channels, only do manually
+                continue
+            if puzzle.is_solved():
+                # found a solved puzzle
+                if minutes is None:
+                    minutes = 5  # default to archiving puzzles that have been solved for 5 minutes. Un-hard-code?
+                if now - puzzle.solve_time > datetime.timedelta(minutes=minutes):
+                    # enough time has passed, archive the channel
+                    puzzles_to_delete.append(puzzle)
+        return puzzles_to_delete
 
     def aggregate_json(self) -> dict:
         """Aggregate all puzzle metadata into a single JSON object, for convenience
