@@ -552,6 +552,8 @@ class Puzzles(commands.Cog):
         puzzle_data.delete_time = datetime.datetime.now(tz=pytz.UTC)
         PuzzleJsonDb.commit(puzzle_data)
 
+        logger.info(f"Scheduling deletion for puzzle: {puzzle_data.to_json()}")
+
         emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
         embed = discord.Embed(
             description=f"{emoji} :recycle: Okay, I will permanently delete this channel in ~5 minutes."

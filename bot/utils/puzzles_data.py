@@ -153,23 +153,23 @@ class _PuzzleJsonDb:
                     puzzles_to_archive.append(puzzle)
         return puzzles_to_archive
 
-    def get_puzzles_to_delete(self, guild_id: int, include_meta: bool = False) -> List[PuzzleData]:
+    def get_puzzles_to_delete(self, guild_id: int, include_meta: bool = False, minutes: int = 5) -> List[PuzzleData]:
         """Return list of puzzles to delete"""
         all_puzzles = self.get_all(guild_id)
         now = datetime.datetime.now(tz=pytz.UTC)
         puzzles_to_delete = []
         for puzzle in all_puzzles:
-            if puzzle.archive_time is not None:
+            if puzzle.solve_time is not None or puzzle.archive_time is not None:
                 # already archived
                 continue
             if puzzle.name == "meta" and not include_meta:
                 # we usually do not want to archive meta channels, only do manually
                 continue
-            if puzzle.is_solved():
-                # found a solved puzzle
+            if puzzle.delete_time is not None:
+                # found a puzzle to delete
                 if minutes is None:
                     minutes = 5  # default to archiving puzzles that have been solved for 5 minutes. Un-hard-code?
-                if now - puzzle.solve_time > datetime.timedelta(minutes=minutes):
+                if now - puzzle.delete_time > datetime.timedelta(minutes=minutes):
                     # enough time has passed, archive the channel
                     puzzles_to_delete.append(puzzle)
         return puzzles_to_delete
