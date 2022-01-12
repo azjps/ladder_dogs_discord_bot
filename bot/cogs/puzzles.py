@@ -577,7 +577,11 @@ class Puzzles(commands.Cog):
         if puzzle_data.status == "deleting" or puzzle_data.delete_time is not None:
             puzzle_data.status = ""
             puzzle_data.delete_time = None
-            PuzzleJsonDb.delete(puzzle_data)
+            PuzzleJsonDb.commit(puzzle_data)
+            logger.info(f"Un-scheduling deletion for puzzle: {puzzle_data.to_json()}")
+
+            emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
+            ctx.send(f"{emoji} Noted, will no longer be deleting this channel.")
         else:
             ctx.send(f":exclamation: Channel isn't being deleted, nothing to undelete")
 
