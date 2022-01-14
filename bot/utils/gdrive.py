@@ -3,6 +3,7 @@ aiogoogle utilities for finding and creating folders in Google Drive
 """
 import asyncio
 import json
+import logging
 from typing import Optional
 
 from aiogoogle import Aiogoogle
@@ -11,6 +12,7 @@ from aiogoogle.auth.creds import ServiceAccountCreds
 # Not sure if this can be consolidated with the gspread_asyncio credentials?
 creds = ServiceAccountCreds(scopes=["https://www.googleapis.com/auth/drive"], **json.load(open("google_secrets.json")))
 
+logger = logging.getLogger(__name__)
 
 async def create_folder(name: str, parent_id: Optional[str] = None) -> dict:
     aiogoogle = Aiogoogle(service_account_creds=creds)
@@ -74,7 +76,11 @@ async def rename_file(file_id: str, name_lambda: callable) -> dict:
                 fileId=file_id,
             )
         )
-        name = result["name"]
+        try:
+            name = result["name"]
+        except KeyError:
+            logger.exception(f"Unable to get name field for {file_id} from {result}")
+            raise
         new_name = name_lambda(name)
         if name != new_name:
             payload = {"name": new_name}
