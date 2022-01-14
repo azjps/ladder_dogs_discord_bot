@@ -556,7 +556,7 @@ class Puzzles(commands.Cog):
 
         emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
         embed = discord.Embed(
-            description=f"{emoji} :recycle: Okay, I will permanently delete this channel in ~5 minutes."
+            description=f"{emoji} :recycle: Okay {ctx.author.mention}, I will permanently delete this channel in ~5 minutes."
         )
         embed.add_field(
             name="Follow-up",
