@@ -800,11 +800,11 @@ class Puzzles(commands.Cog):
             try:
                 await self.archive_solved_puzzles(guild)
             except Exception:
-                logger.exception("Unable to archive solved puzzles for guild {guild.id} {guild.name}")
+                logger.exception(f"Unable to archive solved puzzles for guild {guild.id} {guild.name}")
             try:
                 await self.cleanup_deleted_puzzles(guild)
             except Exception:
-                logger.exception("Unable to delete puzzles for guild {guild.id} {guild.name}")
+                logger.exception(f"Unable to delete puzzles for guild {guild.id} {guild.name}")
 
     @archived_solved_puzzles_loop.before_loop
     async def before_archiving(self):
