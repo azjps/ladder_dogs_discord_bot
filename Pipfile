@@ -8,7 +8,7 @@ ipython = "*"
 pytest = "*"
 
 [packages]
-"discord.py" = "*"
+"discord.py" = ">=2.0"
 alembic = "*"
 gino = "*"
 # psycopg2 = "*"  # not currently used

@@ -14,7 +14,7 @@ from google.oauth2.service_account import Credentials
 
 # non-asyncio imports
 import gspread
-from gspread.models import Spreadsheet
+from gspread import Spreadsheet
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.discovery import build
 

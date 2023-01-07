@@ -138,7 +138,7 @@ class GoogleSheets(commands.Cog):
         print("Ready to start updating nexus spreadsheet")
 
 
-def setup(bot):
+async def setup(bot):
     # Comment this out if google-drive-related package are not installed!
-    bot.add_cog(GoogleSheets(bot))
+    await bot.add_cog(GoogleSheets(bot))
 

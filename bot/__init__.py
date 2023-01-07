@@ -20,8 +20,8 @@ async def get_prefix(_bot, message):
         prefix = utils.get_guild_prefix(_bot, message.guild.id)
     return commands.when_mentioned_or(prefix)(_bot, message)
 
-
-bot = commands.AutoShardedBot(command_prefix=get_prefix)
+intents = discord.Intents(messages=True, message_content=True, guilds=True)
+bot = commands.AutoShardedBot(command_prefix=get_prefix, intents=intents)
 bot.version = __version__
 bot.guild_data = {}
 
@@ -65,15 +65,18 @@ def extensions():
         yield file.as_posix()[:-3].replace("/", ".")
 
 
-def load_extensions(_bot):
+async def load_extensions(_bot):
     for ext in extensions():
         try:
-            _bot.load_extension(ext)
+            await _bot.load_extension(ext)
         except Exception as ex:
             print(f"Failed to load extension {ext} - exception: {ex}")
 
 
-def run():
+async def main():
     setup_logger()
-    load_extensions(bot)
-    bot.run(utils.config.token)
+    async with bot:
+        await load_extensions(bot)
+        await bot.start(utils.config.token)
+
+asyncio.run(main())

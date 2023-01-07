@@ -148,7 +148,7 @@ class Puzzles(commands.Cog):
         for puzzle in all_puzzles:
             if cur_round is None:
                 cur_round = puzzle.round_name
-            if puzzle.round_name != cur_round:
+            if puzzle.round_name != cur_round or len(message) >= 512:
                 # Reached next round, add new embed field
                 embed.add_field(name=cur_round, value=message)
                 cur_round = puzzle.round_name
@@ -811,5 +811,5 @@ class Puzzles(commands.Cog):
         await self.bot.wait_until_ready()
         logger.info("Ready to start archiving solved puzzles")
 
-def setup(bot):
-    bot.add_cog(Puzzles(bot))
+async def setup(bot):
+    await bot.add_cog(Puzzles(bot))

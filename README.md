@@ -71,7 +71,7 @@ Clone this repository
 ```
 git clone https://github.com/azjps/ladder_dogs_discord_bot
 ```
-Create a [discord application, bot](https://realpython.com/how-to-make-a-discord-bot-python/), and add the bot's token to a [`config.json` file](https://github.com/makupi/cookiecutter-discord.py-postgres/blob/master/%7B%7Bcookiecutter.bot_slug%7D%7D/config.json) in the root directory of this project:
+Create a [discord application and bot](https://realpython.com/how-to-make-a-discord-bot-python/). For [discord bot gateway intents](https://discordpy.readthedocs.io/en/stable/intents.html), navigate in the [discord developer portal](https://discord.com/developers/applications/) to `{your app} > Bot > Privileged Gateway Intents`, and toggle on `MESSAGE CONTENT INTENT`. (This bot currently uses message-based commands, and not the [new slash commands API](https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ).) Add the bot's token to a [`config.json` file](https://github.com/makupi/cookiecutter-discord.py-postgres/blob/master/%7B%7Bcookiecutter.bot_slug%7D%7D/config.json) in the root directory of this project:
 ```json
 {
   "discord_bot_token": "{{discord_bot_token}}",
@@ -81,7 +81,7 @@ Create a [discord application, bot](https://realpython.com/how-to-make-a-discord
 ```
 (The database URI can be omitted as its currently not supported.)
 
-For the Google Drive integration (optional), create a [Google service account (for example see these instructions from `gspread`)](
+For the Google Drive integration (optional -- comment out the `gsheet` cog if not desired), create a [Google service account (for example see these instructions from `gspread`)](
 https://gspread.readthedocs.io/en/latest/oauth2.html#enable-api-access), and save the service account key JSON file as `google_secrets.json`.
 
 Now you can run the bot by running the following in a shell:
