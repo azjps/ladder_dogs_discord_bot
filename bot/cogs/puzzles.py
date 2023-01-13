@@ -222,12 +222,16 @@ class Puzzles(commands.Cog):
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
                 hunt_url_base = settings.hunt_url.rstrip("/")
-                if channel_name == "meta":
+                if channel_name == self.META_CHANNEL_NAME:
                     # Use the round name in the URL
                     hunt_name = category_name.lower().replace("-", settings.hunt_url_sep)
+                    hunt_round_base = hunt_url_base
+                    if settings.hunt_round_url:
+                        hunt_round_base = settings.hunt_round_url.rstrip("/")
+                    puzzle_data.hunt_url = f"{hunt_round_base}/{hunt_name}"
                 else:
                     hunt_name = channel_name.replace("-", settings.hunt_url_sep)
-                puzzle_data.hunt_url = f"{hunt_url_base}/{hunt_name}"
+                    puzzle_data.hunt_url = f"{hunt_url_base}/{hunt_name}"
             PuzzleJsonDb.commit(puzzle_data)
             await self.send_initial_puzzle_channel_messages(text_channel)
 

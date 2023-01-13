@@ -17,6 +17,7 @@ class GuildSettings:
     guild_name: str = ""
     hunt_url: str = ""
     hunt_url_sep: str = "_"         # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar
+    hunt_round_url: str = ""        # If specified, a different url to use for rounds, defaults to hunt_url
     discord_bot_channel: str = ""   # Channel to listen for bot commands
     discord_bot_emoji: str = ":ladder: :dog:"  # Short description string or emoji for bot messages
     discord_use_voice_channels: int = 1  # Whether to create voice channels for puzzles
