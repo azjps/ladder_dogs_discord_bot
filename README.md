@@ -94,16 +94,11 @@ DB_PASSWORD=CHANGEME
 For the Google Drive integration (optional -- comment out the `gsheet` cog if not desired), create a [Google service account (for example see these instructions from `gspread`)](
 https://gspread.readthedocs.io/en/latest/oauth2.html#enable-api-access), and save the service account key JSON file as `google_secrets.json`.
 
-Now you can run the bot by running the following in a shell:
-```bash
-# Setup python3 environment
-pip install pipenv
-pipenv install  # creates a new virtualenv
-pipenv shell
-# Start bot
-python run.py
-```
+Now you can run the bot by running the following in a shell: `docker compose up`
+
 The environment variable `$LADDER_SPOT_DATA_DIR` can be used to control the directory where guild settings and puzzle data are stored.
+
+If you're interested in running the latest released version somewhere and don't want to build it yourself, I provide a docker image on dockerhub, that can be retrieved with `docker pull akbarthegreat/splat-storage-discord`
 
 ## Tests
 
