@@ -14,7 +14,9 @@ RUN pip install pipenv
 COPY Pipfile Pipfile
 RUN pipenv install
 
-COPY . /code
+COPY ./run.py run.py
+COPY ./alembic alembic
+COPY ./bot bot
 
 CMD pipenv run python run.py
 
