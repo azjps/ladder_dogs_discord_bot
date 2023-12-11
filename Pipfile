@@ -11,7 +11,7 @@ pytest = "*"
 "discord.py" = ">=2.0"
 alembic = "*"
 gino = "*"
-# psycopg2 = "*"  # not currently used
+psycopg2 = "*"
 dataclasses-json = "*"
 pytz = "*"
 aiogoogle = "*"

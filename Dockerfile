@@ -1,12 +1,20 @@
 FROM python:3.8.5-alpine
 ENV PYTHONUNBUFFERED 1
 
-RUN apk update && apk upgrade && \
-    apk add postgresql-libs postgresql-dev build-base
+RUN apk add --no-cache \
+    build-base \
+    postgresql-dev \
+    postgresql-libs
 
 RUN mkdir /code
 WORKDIR /code
 
 RUN pip install pipenv
-COPY bot /code/
-RUN pipenv sync
+
+COPY Pipfile Pipfile
+RUN pipenv install
+
+COPY . /code
+
+CMD pipenv run python run.py
+

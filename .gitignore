@@ -136,3 +136,4 @@ dmypy.json
 config.json
 *_secrets.json
 data/*
+/.vs

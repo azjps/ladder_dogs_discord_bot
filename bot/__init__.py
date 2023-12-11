@@ -79,4 +79,6 @@ async def main():
         await load_extensions(bot)
         await bot.start(utils.config.token)
 
-asyncio.run(main())
+def run():
+    asyncio.run(main())
+

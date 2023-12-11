@@ -1,9 +1,9 @@
-# Discord Bot for Ladder Dogs
-Simple discord bot which manages puzzle channels for puzzle hunts via discord commands, used by a small-to-medium sized team.
+# *Storage Discord Bot
+This discord bot is a fork of the bot created by Ladder Dogs to manage their hunt status in Discord.  Some design decisions didn't work 100% for our team, as well as some additional feature additions, but the initial implementation is stellar, you can find it at https://github.com/azjps/ladder_dogs_discord_bot
 
-This was initially created from [`cookiecutter-discord.py-postgres`](https://github.com/makupi/cookiecutter-discord.py-postgres) and uses [`aiogoogle`](https://aiogoogle.readthedocs.io/en/latest/)/[`gspread_asyncio`](https://gspread-asyncio.readthedocs.io/en/latest/index.html) for (optional) Google Drive integration.
+# Roadmap
 
-To keep things very simple (and because I started this a week before Hunt starts), currently this is not using a postgres DB, and is just storing some simple puzzle metadata via JSON files and [`dataclasses_json`](https://pypi.org/project/dataclasses-json/). If this bot works well enough, might switch to postgres/gino/alembic for next time.
+I plan to change this over to using postgres as a backend, running Docker-first, switching from !commands to /commands, and adding some work to mesh better with our Sheets system, as well as some other minor QOL fixes as I see them.
 
 # Usage
 
@@ -65,11 +65,14 @@ such as the puzzle url, spreadsheet link. (The formatting of the nexus spreadshe
 the bot only populates the contents of the spreadsheet cells.)
 
 ![Nexus spreadsheet example](docs/gsheet_nexus_example.png)
-# Setup
+
+# Setup with Docker Compose
+
+I don't recommend using docker compose for production instances, I maintain my runs on Kubernetes by deploying a postgres container as a statefulset and the bot as a deployment on its own.  But for testing local changes against a test bot, the docker compose has been very useful for me.
 
 Clone this repository
 ```
-git clone https://github.com/azjps/ladder_dogs_discord_bot
+git clone https://github.com/AkbarTheGreat/splat_storage_discord_bot
 ```
 Create a [discord application and bot](https://realpython.com/how-to-make-a-discord-bot-python/). For [discord bot gateway intents](https://discordpy.readthedocs.io/en/stable/intents.html), navigate in the [discord developer portal](https://discord.com/developers/applications/) to `{your app} > Bot > Privileged Gateway Intents`, and toggle on `MESSAGE CONTENT INTENT`. (This bot currently uses message-based commands, and not the [new slash commands API](https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ).) Add the bot's token to a [`config.json` file](https://github.com/makupi/cookiecutter-discord.py-postgres/blob/master/%7B%7Bcookiecutter.bot_slug%7D%7D/config.json) in the root directory of this project:
 ```json
@@ -79,7 +82,14 @@ Create a [discord application and bot](https://realpython.com/how-to-make-a-disc
   "database": "postgresql://postgres:postgres@localhost:5432/postgres"
 }
 ```
-(The database URI can be omitted as its currently not supported.)
+
+Create a .env file with relevant database information, such as:
+```bash
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USER=postgres
+DB_PASSWORD=CHANGEME
+```
 
 For the Google Drive integration (optional -- comment out the `gsheet` cog if not desired), create a [Google service account (for example see these instructions from `gspread`)](
 https://gspread.readthedocs.io/en/latest/oauth2.html#enable-api-access), and save the service account key JSON file as `google_secrets.json`.
@@ -104,4 +114,4 @@ python -m pytest
 
 # Credits
 
-Inspired by various open source discord bot python projects like [cookiecutter-discord.py-postgres](https://github.com/makupi/cookiecutter-discord.py-postgres) and [discord-pretty-help](https://github.com/stroupbslayen/discord-pretty-help/). Licensed under [GPL 3.0](https://choosealicense.com/licenses/gpl-3.0/) (due to the aforementioned `cookiecutter`).
+Forked from https://github.com/azjps/ladder_dogs_discord_bot and continued licensing under [GPL 3.0](https://choosealicense.com/licenses/gpl-3.0/).

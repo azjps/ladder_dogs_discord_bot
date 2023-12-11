@@ -13,7 +13,7 @@ services:
     environment:
       - POSTGRES_PASSWORD=$DB_PASSWORD
   migration:
-    build: bot
+    build: .
     command: pipenv run alembic upgrade head
     volumes:
       - .:/code
@@ -22,8 +22,7 @@ services:
     environment:
       - DB_DSN=postgresql://$DB_USER:$DB_PASSWORD@db:$DB_PORT/$DB_DATABASE
   bot:
-    build: bot
-    command: pipenv run python run.py
+    build: .
     volumes:
       - .:/code
     depends_on:
