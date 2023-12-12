@@ -9,7 +9,7 @@ from typing import List, Optional
 
 import pytz
 
-from bot.utils.puzzle_settings import DATA_DIR
+#from bot.utils.puzzle_settings import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class MissingPuzzleError(RuntimeError):
     pass
 
+DATA_DIR = Path(__file__).parent.parent.parent / "data"
 
 @dataclass_json
 @dataclass

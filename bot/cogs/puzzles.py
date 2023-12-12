@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 from typing import List, Optional
 
@@ -9,7 +10,8 @@ import pytz
 
 from bot.utils import urls
 from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
-from bot.utils.puzzle_settings import GuildSettings, GuildSettingsDb
+from bot import database
+from bot.database.models import HuntSettings
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +47,7 @@ class Puzzles(commands.Cog):
 
     async def check_is_bot_channel(self, ctx) -> bool:
         """Check if command was sent to bot channel configured in settings"""
-        settings = GuildSettingsDb.get_cached(ctx.guild.id)
+        settings = await database.query_hunt_settings(ctx.guild.id)
         if not settings.discord_bot_channel:
             # If no channel is designated, then all channels are fine
             # to listen to commands.
@@ -101,20 +103,12 @@ class Puzzles(commands.Cog):
 
         await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
 
-    @classmethod
-    def get_guild_settings_from_ctx(cls, ctx, use_cached: bool = True) -> GuildSettings:
-        guild_id = ctx.guild.id
-        if use_cached:
-            return GuildSettingsDb.get_cached(guild_id)
-        else:
-            return GuildSettingsDb.get(guild_id)
-
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def show_settings(self, ctx):
         """*(admin) Show guild-level settings*"""
         guild_id = ctx.guild.id
-        settings = GuildSettingsDb.get(guild_id)
+        settings = await database.query_hunt_settings(guild_id)
         await ctx.channel.send(f"```json\n{settings.to_json()}```")
 
     @commands.command()
@@ -122,11 +116,11 @@ class Puzzles(commands.Cog):
     async def update_setting(self, ctx, setting_key: str, setting_value: str):
         """*(admin) Update guild setting: !update_setting key value*"""
         guild_id = ctx.guild.id
-        settings = GuildSettingsDb.get(guild_id)
+        settings = await database.query_hunt_settings(guild_id)
         if hasattr(settings, setting_key):
             old_value = getattr(settings, setting_key)
-            setattr(settings, setting_key, setting_value)
-            GuildSettingsDb.commit(settings)
+            #setattr(settings, setting_key, setting_value)
+            await settings.update(**{setting_key: setting_value}).apply()
             await ctx.send(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}`")
         else:
             await ctx.send(f":exclamation: Unrecognized setting key: `{setting_key}`. Use `!show_settings` for more info.")
@@ -205,7 +199,7 @@ class Puzzles(commands.Cog):
         text_channel, created_text = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=channel_name, channel_type="text", reason=self.PUZZLE_REASON
         )
-        settings = GuildSettingsDb.get_cached(guild.id)
+        settings = await database.query_hunt_settings(guild.id)
         if created_text:
             puzzle_data = PuzzleData(
                 name=channel_name,
@@ -508,7 +502,7 @@ class Puzzles(commands.Cog):
         puzzle_data.solve_time = datetime.datetime.now(tz=pytz.UTC)
         PuzzleJsonDb.commit(puzzle_data)
 
-        emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
+        emoji = await self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
         embed = discord.Embed(
             description=f"{emoji} :partying_face: Great work! Marked the solution as `{solution}`"
         )
@@ -534,7 +528,7 @@ class Puzzles(commands.Cog):
         puzzle_data.solve_time = None
         PuzzleJsonDb.commit(puzzle_data)
 
-        emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
+        emoji = await self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
         embed = discord.Embed(
             description=f"{emoji} Alright, I've unmarked {prev_solution} as the solution. "
             "You'll get'em next time!"
@@ -558,7 +552,7 @@ class Puzzles(commands.Cog):
 
         logger.info(f"Scheduling deletion for puzzle: {puzzle_data.to_json()}")
 
-        emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
+        emoji = await self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
         embed = discord.Embed(
             description=f"{emoji} :recycle: Okay {ctx.author.mention}, I will permanently delete this channel in ~5 minutes."
         )
@@ -584,7 +578,7 @@ class Puzzles(commands.Cog):
             PuzzleJsonDb.commit(puzzle_data)
             logger.info(f"Un-scheduling deletion for puzzle: {puzzle_data.to_json()}")
 
-            emoji = self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
+            emoji = await self.get_guild_settings_from_ctx(ctx).discord_bot_emoji
             await ctx.send(f"{emoji} Noted, will no longer be deleting this channel.")
         else:
             await ctx.send(f":exclamation: Channel isn't being deleted, nothing to undelete")

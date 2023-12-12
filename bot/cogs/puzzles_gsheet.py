@@ -18,10 +18,11 @@ import pytz
 
 from bot.utils import urls
 from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
-from bot.utils.puzzle_settings import GuildSettingsDb, GuildSettings
 from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
 from bot.utils.gsheet_nexus import update_nexus
+from bot import database
+from bot.database.models import HuntSettings
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class GoogleSheets(commands.Cog):
             # Distinguish metas between different rounds
             name = f"{name} ({round_name})"
 
-        settings = GuildSettingsDb.get(guild_id)
+        settings = await database.query_hunt_settings(guild_id)
         if not settings.drive_parent_id:
             return
 
@@ -68,7 +69,7 @@ class GoogleSheets(commands.Cog):
             # inform spreadsheet creation
             puzzle_url = puzzle.hunt_url
             sheet_url = urls.spreadsheet_url(spreadsheet.id)
-            emoji = GuildSettingsDb.get_cached(guild_id).discord_bot_emoji
+            emoji = await database.query_hunt_settings(guild_id).discord_bot_emoji
             embed = discord.Embed(
                 description=
                 f"{emoji} I've created a spreadsheet for you at {sheet_url}. "
@@ -94,7 +95,7 @@ class GoogleSheets(commands.Cog):
         cell_range[(row - 1) * 2 + 1].value = value
 
     async def add_quick_links_worksheet(
-        self, spreadsheet: gspread_asyncio.AsyncioGspreadSpreadsheet, puzzle: PuzzleData, settings: GuildSettings
+        self, spreadsheet: gspread_asyncio.AsyncioGspreadSpreadsheet, puzzle: PuzzleData, settings: HuntSettings
     ):
         worksheet = await spreadsheet.add_worksheet(title="Quick Links", rows=10, cols=2)
         cell_range = await worksheet.range(1, 1, 10, 2)
@@ -127,7 +128,7 @@ class GoogleSheets(commands.Cog):
     async def refresh_nexus(self):
         """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
         for guild in self.bot.guilds:
-            settings = GuildSettingsDb.get_cached(guild.id)
+            settings = await database.query_hunt_settings(guild.id)
             if settings.drive_nexus_sheet_id:
                 puzzles = PuzzleJsonDb.get_all(guild.id)
                 await update_nexus(agcm=self.agcm, file_id=settings.drive_nexus_sheet_id, puzzles=puzzles)

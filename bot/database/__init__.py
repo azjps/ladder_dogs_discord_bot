@@ -30,3 +30,10 @@ async def query_guild(guild_id: int):
     if guild is None:
         guild = await models.Guild.create(id=guild_id)
     return guild
+
+async def query_hunt_settings(guild_id: int):
+    """query hunt settings, create if not exist"""
+    settings = await models.HuntSettings.get(guild_id)
+    if settings is None:
+        settings = await models.HuntSettings.create(guild_id=guild_id)
+    return settings
