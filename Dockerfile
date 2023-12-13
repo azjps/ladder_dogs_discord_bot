@@ -20,5 +20,5 @@ COPY ./run.py run.py
 COPY ./alembic alembic
 COPY ./bot bot
 
-CMD docker_entrypoint.sh
+CMD ./docker_entrypoint.sh
 
