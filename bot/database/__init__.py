@@ -1,7 +1,6 @@
 from bot import utils
 from gino import Gino
 
-
 naming_convention = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -37,3 +36,17 @@ async def query_hunt_settings(guild_id: int):
     if settings is None:
         settings = await models.HuntSettings.create(guild_id=guild_id)
     return settings
+
+async def query_puzzle_data(guild_id: int, channel_id: int):
+    """query puzzle data, create if not exist"""
+    puzzle = await models.PuzzleData.query.where(
+        (models.PuzzleData.guild_id == guild_id) &
+        (models.PuzzleData.channel_id == channel_id)
+    ).gino.first()
+    if puzzle is None:
+        puzzle = await models.PuzzleData.create()
+        await puzzle.update(
+            guild_id=guild_id,
+            channel_id = channel_id
+        ).apply()
+    return puzzle

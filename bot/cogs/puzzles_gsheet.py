@@ -17,12 +17,12 @@ import gspread_formatting
 import pytz
 
 from bot.utils import urls
-from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
+from bot.utils.puzzles_db import MissingPuzzleError, PuzzleDb
 from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
 from bot.utils.gsheet_nexus import update_nexus
 from bot import database
-from bot.database.models import HuntSettings
+from bot.database.models import HuntSettings, PuzzleData
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +62,10 @@ class GoogleSheets(commands.Cog):
             round_folder_id = round_folder["id"]
 
             spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
-            puzzle.google_folder_id = round_folder_id
-            puzzle.google_sheet_id = spreadsheet.id
-            PuzzleJsonDb.commit(puzzle)
+            puzzle.update(
+                google_folder_id = round_folder_id,
+                google_sheet_id = spreadsheet.id
+            ).apply()
 
             # inform spreadsheet creation
             puzzle_url = puzzle.hunt_url
@@ -130,7 +131,7 @@ class GoogleSheets(commands.Cog):
         for guild in self.bot.guilds:
             settings = await database.query_hunt_settings(guild.id)
             if settings.drive_nexus_sheet_id:
-                puzzles = PuzzleJsonDb.get_all(guild.id)
+                puzzles = await PuzzleDb.get_all(guild.id)
                 await update_nexus(agcm=self.agcm, file_id=settings.drive_nexus_sheet_id, puzzles=puzzles)
 
     @refresh_nexus.before_loop

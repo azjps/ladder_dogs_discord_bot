@@ -8,7 +8,7 @@ from typing import List, Optional
 import gspread_asyncio
 
 from bot.utils import urls
-from bot.utils.puzzles_data import PuzzleData
+from bot.database.models import PuzzleData
 
 logger = logging.getLogger(__name__)
 
@@ -61,25 +61,3 @@ async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_i
     await zero_ws.update_cells(cell_range)
     logger.info(f"Finished updating nexus spreadsheet with {len(puzzles)} puzzles")
 
-
-if __name__ == "__main__":
-    # Simple demo CLI, run as
-    # python -m bot.utils.gsheet_nexus --sheet [] --guild []
-    import argparse
-    import asyncio
-    from bot.utils.gsheet import get_credentials
-    from bot.utils.puzzles_data import PuzzleJsonDb
-
-    logging.basicConfig(level=logging.DEBUG)
-
-    # Create an AsyncioGspreadClientManager object which
-    # will give us access to the Spreadsheet API.
-    agcm = gspread_asyncio.AsyncioGspreadClientManager(get_credentials)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--sheet", "--sheet-id", required=True, help="ID (in URL) of Nexus Google Sheet")
-    parser.add_argument("--guild", "--guild-id", required=True, type=int, help="ID of Discord Guild with puzzle metadata")
-    args = parser.parse_args()
-
-    # Turn on debugging if you're new to asyncio!
-    asyncio.run(update_nexus(agcm, args.sheet, PuzzleJsonDb.get_all(args.guild)), debug=True)

@@ -1,1 +1,4 @@
 Generic single-database configuration.
+
+To add new fields, update the model and then run:
+`pipenv run alembic revision --autogenerate -m "<Message>"`
