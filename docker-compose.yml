@@ -12,15 +12,6 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_PASSWORD=$DB_PASSWORD
-  migration:
-    build: .
-    command: pipenv run alembic upgrade head
-    volumes:
-      - .:/code
-    depends_on:
-      - db
-    environment:
-      - DB_DSN=postgresql://$DB_USER:$DB_PASSWORD@db:$DB_PORT/$DB_DATABASE
   bot:
     build: .
     volumes:

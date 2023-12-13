@@ -14,9 +14,11 @@ RUN pip install pipenv
 COPY Pipfile Pipfile
 RUN pipenv install
 
+COPY ./docker_entrypoint.sh docker_entrypoint.sh
+COPY ./alembic.ini alembic.ini
 COPY ./run.py run.py
 COPY ./alembic alembic
 COPY ./bot bot
 
-CMD pipenv run python run.py
+CMD docker_entrypoint.sh
 
