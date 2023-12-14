@@ -123,7 +123,8 @@ class Puzzles(commands.Cog):
         settings = await database.query_hunt_settings(guild_id)
         if hasattr(settings, setting_key):
             old_value = getattr(settings, setting_key)
-            #setattr(settings, setting_key, setting_value)
+            if HuntSettings.column_type(setting_key) == int:
+                setting_value = int(setting_value)
             await settings.update(**{setting_key: setting_value}).apply()
             await ctx.send(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}`")
         else:
