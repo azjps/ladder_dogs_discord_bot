@@ -19,6 +19,16 @@ class HuntSettings(db.Model):
     drive_resources_id = db.Column(db.Text)                         # Document with resources links, etc
     archive_delay = db.Column(db.Integer, default = 300)            # Delay for items to be archived, in seconds
 
+    # I don't love managing this way, but I can't find anything in SQLAlchemy about introspecting columns after they're created.
+    @classmethod
+    def column_type(cls, column_name):
+        if column_name in [
+            "guild_id",
+            "discord_use_voice_channels",
+            "archive_delay"]:
+            return int
+        return str
+
     def to_json(self):
         return textwrap.dedent(f"""
                {{ "guild_id": {self.guild_id},
