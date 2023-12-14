@@ -511,10 +511,14 @@ class Puzzles(commands.Cog):
         embed = discord.Embed(
             description=f"{emoji} :partying_face: Great work! Marked the solution as `{solution}`"
         )
+        delay = float(settings.archive_delay)/60
+        delay_str = "%g minute" % delay
+        if delay != 1.0:
+            delay_str = delay_str + "s"
         embed.add_field(
             name="Follow-up",
             value="If the solution was mistakenly entered, please message `!unsolve`. "
-            "Otherwise, in around 5 minutes, I will automatically archive this "
+            f"Otherwise, in around {delay_str}, I will automatically archive this "
             "puzzle channel to #solved-puzzles and archive the Google Spreadsheet",
         )
         await ctx.send(embed=embed)
@@ -760,13 +764,13 @@ class Puzzles(commands.Cog):
 
         return solved_category
 
-    async def archive_solved_puzzles(self, guild: discord.Guild, minutes: Optional[int] = None) -> List[PuzzleData]:
+    async def archive_solved_puzzles(self, guild: discord.Guild) -> List[PuzzleData]:
         """Archive puzzles for which sufficient time has elapsed since solve time
 
         Move them to a solved-puzzles channel category, and rename spreadsheet
         to start with the text [SOLVED]
         """
-        puzzles_to_archive = await PuzzleDb.get_solved_puzzles_to_archive(guild.id, minutes=minutes)
+        puzzles_to_archive = await PuzzleDb.get_solved_puzzles_to_archive(guild.id)
         if len(puzzles_to_archive) == 0:
             return puzzles_to_archive
         logger.info(f"Found {len(puzzles_to_archive)} to archive: {puzzles_to_archive}")
@@ -797,14 +801,14 @@ class Puzzles(commands.Cog):
         return puzzles_to_archive
 
     @commands.command()
-    async def archive_solved(self, ctx, *, minutes: Optional[int]):
+    async def archive_solved(self, ctx):
         """*(admin) Archive solved puzzles. Done automatically*
 
         Done automatically on task loop, so this is only useful for debugging
         """
         if not (await self.check_is_bot_channel(ctx)):
             return
-        puzzles_to_archive = await self.archive_solved_puzzles(ctx.guild, minutes=minutes)
+        puzzles_to_archive = await self.archive_solved_puzzles(ctx.guild)
         mentions = " ".join([p.channel_mention for p in puzzles_to_archive])
         message = f"Archived {len(puzzles_to_archive)} solved puzzle channels: {mentions}"
         logger.info(message)

@@ -41,12 +41,13 @@ class PuzzleDb:
         return PuzzleData.sort_by_round_start(puzzle_datas)
 
     @classmethod
-    async def get_solved_puzzles_to_archive(cls, guild_id, now=None, include_general: bool = False, minutes: Optional[int] = 5) -> List[PuzzleData]:
+    async def get_solved_puzzles_to_archive(cls, guild_id, now=None, include_general: bool = False) -> List[PuzzleData]:
         """Returns list of all solved but unarchived puzzles"""
         all_puzzles = await cls.get_all(guild_id)
         now = now or datetime.datetime.now(tz=pytz.UTC)
         puzzles_to_archive = []
         settings = await database.query_hunt_settings(guild_id)
+        delay_in_seconds = settings.archive_delay
         for puzzle in all_puzzles:
             if puzzle.archive_time is not None:
                 # already archived
@@ -56,9 +57,7 @@ class PuzzleDb:
                 continue
             if puzzle.is_solved():
                 # found a solved puzzle
-                if minutes is None:
-                    minutes = 5  # default to archiving puzzles that have been solved for 5 minutes. Un-hard-code?
-                if now - puzzle.solve_time > datetime.timedelta(minutes=minutes):
+                if now - puzzle.solve_time > datetime.timedelta(seconds=delay_in_seconds):
                     # enough time has passed, archive the channel
                     puzzles_to_archive.append(puzzle)
         return puzzles_to_archive
