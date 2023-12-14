@@ -41,17 +41,18 @@ class PuzzleDb:
         return PuzzleData.sort_by_round_start(puzzle_datas)
 
     @classmethod
-    async def get_solved_puzzles_to_archive(cls, guild_id, now=None, include_meta: bool = False, minutes: Optional[int] = 5) -> List[PuzzleData]:
+    async def get_solved_puzzles_to_archive(cls, guild_id, now=None, include_general: bool = False, minutes: Optional[int] = 5) -> List[PuzzleData]:
         """Returns list of all solved but unarchived puzzles"""
         all_puzzles = await cls.get_all(guild_id)
         now = now or datetime.datetime.now(tz=pytz.UTC)
         puzzles_to_archive = []
+        settings = await database.query_hunt_settings(guild_id)
         for puzzle in all_puzzles:
             if puzzle.archive_time is not None:
                 # already archived
                 continue
-            if puzzle.name == "meta" and not include_meta:
-                # we usually do not want to archive meta channels, only do manually
+            if puzzle.name == settings.discussion_channel and not include_general:
+                # we usually do not want to archive general channels, only do manually
                 continue
             if puzzle.is_solved():
                 # found a solved puzzle
@@ -63,17 +64,18 @@ class PuzzleDb:
         return puzzles_to_archive
 
     @classmethod
-    async def get_puzzles_to_delete(cls, guild_id: int, include_meta: bool = False, minutes: int = 5) -> List[PuzzleData]:
+    async def get_puzzles_to_delete(cls, guild_id: int, include_general: bool = False, minutes: int = 5) -> List[PuzzleData]:
         """Return list of puzzles to delete"""
         all_puzzles = await cls.get_all(guild_id)
         now = datetime.datetime.now(tz=pytz.UTC)
         puzzles_to_delete = []
+        settings = await database.query_hunt_settings(guild_id)
         for puzzle in all_puzzles:
             if puzzle.solve_time is not None or puzzle.archive_time is not None:
                 # already archived
                 continue
-            if puzzle.name == "meta" and not include_meta:
-                # we usually do not want to archive meta channels, only do manually
+            if puzzle.name == settings.discussion_channel and not include_general:
+                # we usually do not want to archive general channels, only do manually
                 continue
             if puzzle.delete_time is not None:
                 # found a puzzle to delete

@@ -22,14 +22,15 @@ For a new round/world of puzzles, first start by posting `!round` in the `#bot` 
 !r puzzle-round-name
 ```
 This will create a `#puzzleround-name` [category](https://support.discord.com/hc/en-us/articles/115001580171-Channel-Categories-101)
-along with a `#meta` puzzle text and voice channel for the round. The `#meta` channels are the place for general discussion about the round,
-as well as discussion about the meta puzzle (if there is more than one meta, creating new puzzle channels would be prudent).
+along with a `#general` puzzle text and voice channel for the round. The `#general` channels are the place for general discussion
+about the round, but the name can be changed as a setting if desired.  If the name is `#meta`, a sheet will also be created for
+tracking the meta puzzle.  (if there is more than one meta, creating new puzzle channels would be prudent).
 
 For a new puzzle, one can either post the puzzle via `!puzzle` in the `#bot` channel:
 ```
 !p puzzle-round-name: puzzle-name
 ```
-Or simply `!p puzzle-name` in the corresponding round's `#meta` channel. This will create a `#puzzle-name` text and voice channel
+Or simply `!p puzzle-name` in the corresponding round's `#general` channel. This will create a `#puzzle-name` text and voice channel
 where discussion of the puzzle can take place.
 
 When the puzzle is solved, post `!solve SOLUTION` in the puzzle's channel. The text channel will automatically get archived (moved
