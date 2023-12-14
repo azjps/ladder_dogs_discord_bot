@@ -16,7 +16,6 @@ from bot.database.models import HuntSettings, PuzzleData
 logger = logging.getLogger(__name__)
 
 class Puzzles(commands.Cog):
-    META_CHANNEL_NAME = "meta"
     META_REASON = "bot-meta"
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
@@ -45,6 +44,7 @@ class Puzzles(commands.Cog):
     async def on_command_error(self, ctx, error):
         # if isinstance(error, commands.errors.CheckFailure):
         #     await ctx.send('You do not have the correct role for this command.')
+        logger.exception(error)
         await ctx.send(":exclamation: " + str(error))
 
     async def check_is_bot_channel(self, ctx) -> bool:
@@ -66,10 +66,11 @@ class Puzzles(commands.Cog):
     async def puzzle(self, ctx, *, arg):
         """*Create new puzzle channels: !p round-name: puzzle-name*
 
-        Can be posted in either a #meta channel or the bot channel
+        Can be posted in either a #general channel or the bot channel
         """
         guild = ctx.guild
-        if ctx.channel.name == "meta":
+        settings = await database.query_hunt_settings(ctx.guild.id)
+        if ctx.channel.name == settings.discussion_channel:
             category = ctx.channel.category
             if ":" in arg:
                 round_name, puzzle_name = arg.split(":", 1)
@@ -103,7 +104,8 @@ class Puzzles(commands.Cog):
             # TODO: debug position?
             category = await guild.create_category(category_name, position=len(guild.categories) - 2)
 
-        await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
+        settings = await database.query_hunt_settings(ctx.guild.id)
+        await self.create_puzzle_channel(ctx, category.name, settings.discussion_channel)
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
@@ -217,7 +219,7 @@ class Puzzles(commands.Cog):
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
                 hunt_url_base = settings.hunt_url.rstrip("/")
-                if channel_name == self.META_CHANNEL_NAME:
+                if channel_name == settings.discussion_channel:
                     # Use the round name in the URL
                     hunt_name = category_name.lower().replace("-", settings.hunt_url_sep)
                     hunt_round_base = hunt_url_base
@@ -233,11 +235,11 @@ class Puzzles(commands.Cog):
                     ).apply()
             await self.send_initial_puzzle_channel_messages(text_channel)
 
-            gsheet_cog = self.bot.get_cog("GoogleSheets")
-            # print("google sheets cog:", gsheet_cog)
-            if gsheet_cog is not None:
-                # update google sheet ID
-                await gsheet_cog.create_puzzle_spreadsheet(text_channel, puzzle_data)
+            if channel_name != settings.discussion_channel or channel_name == "meta":
+                gsheet_cog = self.bot.get_cog("GoogleSheets")
+                if gsheet_cog is not None:
+                    # update google sheet ID
+                    await gsheet_cog.create_puzzle_spreadsheet(text_channel, puzzle_data)
         else:
             puzzle_data = await self.get_puzzle_data_from_channel(text_channel)
 
