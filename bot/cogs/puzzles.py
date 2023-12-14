@@ -25,6 +25,9 @@ class Puzzles(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    def begin_loops(self):
+        logger.info("Beginning loops")
         self.archived_solved_puzzles_loop.start()
 
     @commands.Cog.listener()
@@ -494,7 +497,7 @@ class Puzzles(commands.Cog):
             return
 
         solution = arg.strip().upper()
-        puzzle_data.update(
+        await puzzle_data.update(
             status = "solved",
             solution = solution,
             solve_time = datetime.datetime.now(tz=pytz.UTC)
@@ -522,7 +525,7 @@ class Puzzles(commands.Cog):
             return
 
         prev_solution = puzzle_data.solution
-        puzzle_data.update(
+        await puzzle_data.update(
             status = "unsolved",
             solution = "",
             solve_time = None
@@ -547,7 +550,7 @@ class Puzzles(commands.Cog):
         if puzzle_data.solution:
             raise ValueError("Unable to delete a solved puzzle channel, please contact discord admins if needed")
 
-        puzzle_data.update(
+        await puzzle_data.update(
             status = "deleting",
             delete_time = datetime.datetime.now(tz=pytz.UTC)
         ).apply()
@@ -576,7 +579,7 @@ class Puzzles(commands.Cog):
             return
 
         if puzzle_data.status == "deleting" or puzzle_data.delete_time is not None:
-            puzzle_data.update(
+            await puzzle_data.update(
                 status = "",
                 delete_time = None
             ).apply()
@@ -761,7 +764,9 @@ class Puzzles(commands.Cog):
         to start with the text [SOLVED]
         """
         puzzles_to_archive = await PuzzleDb.get_solved_puzzles_to_archive(guild.id, minutes=minutes)
-        # logger.info(f"Found {len(puzzles_to_archive)} to archive: {puzzles_to_archive}")
+        if len(puzzles_to_archive) == 0:
+            return puzzles_to_archive
+        logger.info(f"Found {len(puzzles_to_archive)} to archive: {puzzles_to_archive}")
         gsheet_cog = self.bot.get_cog("GoogleSheets")
 
         for puzzle in puzzles_to_archive:
@@ -778,8 +783,10 @@ class Puzzles(commands.Cog):
             if gsheet_cog:
                 await gsheet_cog.archive_puzzle_spreadsheet(puzzle)
 
-            channel_mention  = channel.mention if channel else None,
-            puzzle.update(
+            channel_mention = None
+            if channel:
+                channel_mention = channel.mention
+            await puzzle.update(
                 archive_time = datetime.datetime.now(tz=pytz.UTC),
                 archive_channel_mention = channel_mention,
                 solved_round_id = solved_category.id

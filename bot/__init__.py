@@ -52,6 +52,12 @@ async def on_ready():
     """
     )
 
+    for key in bot.cogs:
+        try:
+            bot.cogs[key].begin_loops()
+        except AttributeError:
+            pass
+
 
 def setup_logger(log_level=logging.INFO):
     # Set up basic logging as per https://discordpy.readthedocs.io/en/latest/logging.html#logging-setup
@@ -60,7 +66,7 @@ def setup_logger(log_level=logging.INFO):
     handler = logging.StreamHandler()
     handler.setLevel(log_level)
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-    handler.addFilter(SkipDatabaseLogs())
+    #handler.addFilter(SkipDatabaseLogs())
     logger.addHandler(handler)
 
 
