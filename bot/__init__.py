@@ -13,6 +13,9 @@ __version__ = "0.1.0"
 
 invite_link = "https://discordapp.com/api/oauth2/authorize?client_id={}&scope=bot&permissions=377957125136"
 
+class SkipDatabaseLogs(logging.Filter):
+    def filter(self, record):
+        return record.name != "gino.engine._SAEngine"
 
 async def get_prefix(_bot, message):
     prefix = utils.config.prefix
@@ -36,8 +39,8 @@ async def preload_guild_data():
 
 @bot.event
 async def on_ready():
-    bot.invite = invite_link.format(bot.user.id)
     await database.setup()
+    bot.invite = invite_link.format(bot.user.id)
     bot.guild_data = await preload_guild_data()
     guild_names = [g.name for g in bot.guilds]
     guild_ids = [g.id for g in bot.guilds]
@@ -54,8 +57,10 @@ def setup_logger(log_level=logging.INFO):
     # Set up basic logging as per https://discordpy.readthedocs.io/en/latest/logging.html#logging-setup
     logger = logging.getLogger()  # 'discord')
     logger.setLevel(log_level)
-    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='a')
+    handler = logging.StreamHandler()
+    handler.setLevel(log_level)
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    handler.addFilter(SkipDatabaseLogs())
     logger.addHandler(handler)
 
 

@@ -1,5 +1,6 @@
 from bot import utils
 from gino import Gino
+import logging
 
 naming_convention = {
     "ix": "ix_%(column_0_label)s",
