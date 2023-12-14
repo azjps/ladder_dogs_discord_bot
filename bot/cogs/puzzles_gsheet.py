@@ -65,7 +65,7 @@ class GoogleSheets(commands.Cog):
             round_folder_id = round_folder["id"]
 
             spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
-            puzzle.update(
+            await puzzle.update(
                 google_folder_id = round_folder_id,
                 google_sheet_id = spreadsheet.id
             ).apply()
@@ -73,7 +73,8 @@ class GoogleSheets(commands.Cog):
             # inform spreadsheet creation
             puzzle_url = puzzle.hunt_url
             sheet_url = urls.spreadsheet_url(spreadsheet.id)
-            emoji = await database.query_hunt_settings(guild_id).discord_bot_emoji
+            settings = await database.query_hunt_settings(guild_id)
+            emoji = settings.discord_bot_emoji
             embed = discord.Embed(
                 description=
                 f"{emoji} I've created a spreadsheet for you at {sheet_url}. "
@@ -140,7 +141,7 @@ class GoogleSheets(commands.Cog):
     @refresh_nexus.before_loop
     async def before_refreshing_nexus(self):
         await self.bot.wait_until_ready()
-        print("Ready to start updating nexus spreadsheet")
+        logger.info("Ready to start updating nexus spreadsheet")
 
 
 async def setup(bot):

@@ -66,7 +66,7 @@ def setup_logger(log_level=logging.INFO):
     handler = logging.StreamHandler()
     handler.setLevel(log_level)
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-    handler.addFilter(SkipDatabaseLogs())
+    #handler.addFilter(SkipDatabaseLogs())
     logger.addHandler(handler)
 
 
