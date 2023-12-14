@@ -25,6 +25,9 @@ class Puzzles(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    def begin_loops(self):
+        logger.info("Beginning loops")
         self.archived_solved_puzzles_loop.start()
 
     @commands.Cog.listener()
@@ -761,7 +764,7 @@ class Puzzles(commands.Cog):
         to start with the text [SOLVED]
         """
         puzzles_to_archive = await PuzzleDb.get_solved_puzzles_to_archive(guild.id, minutes=minutes)
-        # logger.info(f"Found {len(puzzles_to_archive)} to archive: {puzzles_to_archive}")
+        logger.info(f"Found {len(puzzles_to_archive)} to archive: {puzzles_to_archive}")
         gsheet_cog = self.bot.get_cog("GoogleSheets")
 
         for puzzle in puzzles_to_archive:
@@ -800,7 +803,7 @@ class Puzzles(commands.Cog):
         logger.info(message)
         await ctx.send(message)
 
-    @tasks.loop(seconds=30.0)
+    @tasks.loop(seconds=2.0)
     async def archived_solved_puzzles_loop(self):
         """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
         for guild in self.bot.guilds:

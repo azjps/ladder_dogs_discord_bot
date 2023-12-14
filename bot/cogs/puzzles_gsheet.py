@@ -32,6 +32,9 @@ class GoogleSheets(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    def begin_loops(self):
+        logger.info("Beginning loops")
         self.refresh_nexus.start()
 
     @commands.Cog.listener()
