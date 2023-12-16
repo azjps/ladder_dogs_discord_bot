@@ -164,6 +164,10 @@ class Puzzles(commands.Cog):
                 message += f" status:{puzzle.status}"
             message += "\n"
 
+        if len(message) > 0:
+            # Add any dangling fields to our output
+            embed.add_field(name=cur_round, value=message)
+
         if embed.fields:
             await ctx.send(embed=embed)
 
