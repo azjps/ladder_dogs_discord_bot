@@ -21,7 +21,17 @@ class PuzzleDb:
 
     @classmethod
     async def delete(cls, puzzle_data):
-        await puzzle_data.update(delete_time = datetime.datetime.now(tz=pytz.UTC)).apply()
+        await puzzle_data.update(
+            status = "deleted",
+            delete_time = datetime.datetime.now(tz=pytz.UTC)
+        ).apply()
+
+    @classmethod
+    async def request_delete(cls, puzzle_data):
+        await puzzle_data.update(
+            status = "deleting",
+            delete_request = datetime.datetime.now(tz=pytz.UTC)
+        ).apply()
 
     @classmethod
     async def get(cls, guild_id, puzzle_id) -> PuzzleData:
@@ -36,7 +46,8 @@ class PuzzleDb:
     @classmethod
     async def get_all(cls, guild_id) -> List[PuzzleData]:
         puzzle_datas = await PuzzleData.query.where(
-            (PuzzleData.guild_id == guild_id) 
+            (PuzzleData.guild_id == guild_id) &
+            (PuzzleData.delete_time == None)
 		).gino.all()
         return PuzzleData.sort_by_round_start(puzzle_datas)
 
@@ -76,11 +87,11 @@ class PuzzleDb:
             if puzzle.name == settings.discussion_channel and not include_general:
                 # we usually do not want to archive general channels, only do manually
                 continue
-            if puzzle.delete_time is not None:
+            if puzzle.delete_request is not None:
                 # found a puzzle to delete
                 if minutes is None:
                     minutes = 5  # default to archiving puzzles that have been solved for 5 minutes. Un-hard-code?
-                if now - puzzle.delete_time > datetime.timedelta(minutes=minutes):
+                if now - puzzle.delete_request > datetime.timedelta(minutes=minutes):
                     # enough time has passed, archive the channel
                     puzzles_to_delete.append(puzzle)
         return puzzles_to_delete

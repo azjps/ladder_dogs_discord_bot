@@ -25,6 +25,7 @@ class PuzzleData(db.Model):
     start_time = db.Column(db.DateTime(timezone=True))
     solve_time = db.Column(db.DateTime(timezone=True))
     archive_time = db.Column(db.DateTime(timezone=True))
+    delete_request = db.Column(db.DateTime(timezone=True))
     delete_time = db.Column(db.DateTime(timezone=True))
 
     @classmethod

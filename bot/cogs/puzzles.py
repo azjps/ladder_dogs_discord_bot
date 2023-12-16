@@ -145,6 +145,11 @@ class Puzzles(commands.Cog):
         embed = discord.Embed()
         cur_round = None
         message = ""
+
+        if len(all_puzzles) == 0:
+            cur_round = ""
+            message = "No puzzles to list"
+
         # Create a message with a new embed field per round,
         # listing all puzzles in the embed field
         for puzzle in all_puzzles:
@@ -564,11 +569,7 @@ class Puzzles(commands.Cog):
         if puzzle_data.solution:
             raise ValueError("Unable to delete a solved puzzle channel, please contact discord admins if needed")
 
-        await puzzle_data.update(
-            status = "deleting",
-            delete_time = datetime.datetime.now(tz=pytz.UTC)
-        ).apply()
-
+        await PuzzleDb.request_delete(puzzle_data)
         logger.info(f"Scheduling deletion for puzzle: {puzzle_data.name}")
 
         settings = await database.query_hunt_settings(ctx.guild.id)
@@ -581,6 +582,23 @@ class Puzzles(commands.Cog):
             value="If you didn't mean to delete this channel, please message `!undelete`. "
             "Otherwise, in around 5 minutes, I will automatically delete this "
             "puzzle channel.",
+        )
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    @commands.has_permissions(manage_channels=True)
+    async def cleanup_deleted_channels(self, ctx):
+        """*(admin) Mark manually deleted channels as deleted in the backend*"""
+        all_puzzles = await PuzzleDb.get_all(ctx.guild.id)
+        count = 0
+        for puzzle in all_puzzles:
+            if puzzle.delete_time is None:
+                if self.bot.get_channel(puzzle.channel_id) is None:
+                    count = count + 1
+                    logger.info(f"Marking channel {puzzle.round_name}/{puzzle.name} as deleted")
+                    await PuzzleDb.delete(puzzle)
+        embed = discord.Embed(
+            description=f"Swept through channels, marked {count} missing channels as deleted in the backend."
         )
         await ctx.send(embed=embed)
 
@@ -605,30 +623,27 @@ class Puzzles(commands.Cog):
         else:
             await ctx.send(f":exclamation: Channel isn't being deleted, nothing to undelete")
 
-    async def cleanup_deleted_puzzles(self, guild: discord.Guild):
-        """Archive puzzles for which sufficient time has elapsed since solve time
+    async def process_deleted_puzzles(self, guild: discord.Guild):
+        """Deletes puzzles for which sufficient time has elapsed since being marked for deletion.
 
-        Move them to a solved-puzzles channel category, and rename spreadsheet
-        to start with the text [SOLVED]
+        Delete the channels and mark it as deleted in the database.
         """
         puzzles_to_delete = await PuzzleDb.get_puzzles_to_delete(guild.id)
 
         delete_reason = "User requested deletion"
         for puzzle in puzzles_to_delete:
             assert (
-                puzzle.delete_time is not None
+                puzzle.delete_request is not None
                 and puzzle.solve_time is None
                 and puzzle.archive_time is None
             )
             logger.info(f"Deleting puzzle: {puzzle.name}")
 
-            await self.delete_voice_channel(guild, puzzle, reason=delete_reason)
-
             text_channel = discord.utils.get(
                 guild.channels, type=discord.ChannelType.text, id=puzzle.channel_id
             )
-            # Should we extra mark the db entry as deleted?  Perhaps.
-            #PuzzleJsonDb.delete(puzzle)
+            await self.delete_voice_channel(guild, puzzle, reason=delete_reason)
+            await PuzzleDb.delete(puzzle)
             # delete text channel last so that errors can be reported
             await text_channel.delete(reason=self.DELETE_REASON)
 
@@ -653,8 +668,7 @@ class Puzzles(commands.Cog):
         )
         if voice_channel:
             await voice_channel.delete(reason=self.DELETE_REASON)
-        # Should we extra mark the db entry as deleted?  Perhaps.
-        #PuzzleJsonDb.delete(puzzle_data)
+        PuzzleDb.delete(puzzle_data)
         # delete text channel last so that errors can be reported
         await ctx.channel.delete(reason=self.DELETE_REASON)
 
@@ -830,7 +844,7 @@ class Puzzles(commands.Cog):
             except Exception:
                 logger.exception(f"Unable to archive solved puzzles for guild {guild.id} {guild.name}")
             try:
-                await self.cleanup_deleted_puzzles(guild)
+                await self.process_deleted_puzzles(guild)
             except Exception:
                 logger.exception(f"Unable to delete puzzles for guild {guild.id} {guild.name}")
 
