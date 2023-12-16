@@ -96,13 +96,16 @@ class Puzzles(commands.Cog):
         if not (await self.check_is_bot_channel(ctx)):
             return
 
-        category_name = self.clean_name(arg)
+        category_name = arg
         guild = ctx.guild
         category = discord.utils.get(guild.categories, name=category_name)
         if not category:
             logger.info(f"Creating a new channel category for round: {category_name}")
-            # TODO: debug position?
-            category = await guild.create_category(category_name, position=len(guild.categories) - 2)
+            # Normally place this category as the two from the end, unless it's the only channel or the second channel, then place it at the end.
+            new_position = len(guild.categories) - 2
+            if new_position < 1:
+                new_position = len(guild.categories)
+            category = await guild.create_category(category_name, position=new_position)
 
         settings = await database.query_hunt_settings(ctx.guild.id)
         await self.create_puzzle_channel(ctx, category.name, settings.discussion_channel)
@@ -195,7 +198,7 @@ class Puzzles(commands.Cog):
         create corresponding Google Sheet if GoogleSheets cog is set up.
         """
         guild = ctx.guild
-        category_name = self.clean_name(round_name)
+        category_name = round_name
         category = discord.utils.get(guild.categories, name=category_name)
         if category is None:
             raise ValueError(f"Round {category_name} not found")

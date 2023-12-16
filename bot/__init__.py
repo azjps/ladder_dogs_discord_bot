@@ -69,6 +69,10 @@ def setup_logger(log_level=logging.INFO):
     handler.addFilter(SkipDatabaseLogs())
     logger.addHandler(handler)
 
+    discord_logger = logging.getLogger('discord')
+    discord_logger.setLevel(log_level)
+    discord_logger.addHandler(handler)
+
 
 def extensions():
     files = Path("bot", "cogs").rglob("*.py")
@@ -85,7 +89,7 @@ async def load_extensions(_bot):
 
 
 async def main():
-    setup_logger()
+    setup_logger(logging.INFO)
     async with bot:
         await load_extensions(bot)
         await bot.start(utils.config.token)

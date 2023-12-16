@@ -127,6 +127,8 @@ class GoogleSheets(commands.Cog):
                 return sheet_name
             return f"[SOLVED: {puzzle.solution}] {sheet_name}"
 
+        if puzzle.google_sheet_id is None:
+            return None
         return await rename_file(puzzle.google_sheet_id, name_lambda=archive_puzzle_name)
 
     @tasks.loop(seconds=60.0)
