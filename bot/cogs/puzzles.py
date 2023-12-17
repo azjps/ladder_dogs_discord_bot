@@ -41,12 +41,12 @@ class Puzzles(commands.Cog):
             name = name[1:-1]
         return "-".join(name.lower().split())
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        # if isinstance(error, commands.errors.CheckFailure):
-        #     await ctx.send('You do not have the correct role for this command.')
+    async def cog_app_command_error(self, interaction, error):
         logger.exception(error)
-        await ctx.send(":exclamation: " + str(error))
+        if interaction.response.is_done():
+            await interaction.response.edit_message(":exclamation: " + str(error))
+        else:
+            await interaction.response.send_message(":exclamation: " + str(error))
 
     async def check_is_bot_channel(self, interaction) -> bool:
         """Check if command was sent to bot channel configured in settings"""

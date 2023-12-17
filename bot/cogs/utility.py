@@ -1,6 +1,7 @@
 import sys
 import time
 from datetime import datetime
+import logging
 
 import discord
 from discord import app_commands
@@ -10,6 +11,7 @@ from bot import utils
 
 PY_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
 
+logger = logging.getLogger(__name__)
 
 class Utility(commands.Cog):
     def __init__(self, bot):
@@ -20,18 +22,24 @@ class Utility(commands.Cog):
     async def on_ready(self):
         print(f"{type(self).__name__} Cog ready.")
 
+    async def cog_app_command_error(self, interaction, error):
+        logger.exception(error)
+        if interaction.response.is_done():
+            await interaction.response.edit_message(":exclamation: " + str(error))
+        else:
+            await interaction.response.send_message(":exclamation: " + str(error))
+
     @app_commands.command()
     async def ping(self, interaction: discord.Interaction):
         """*Current ping and latency of the bot*
         **Example**: `/ping`"""
         embed = discord.Embed()
         before_time = time.time()
-        await interaction.response.send_message(embed=embed)
         latency = round(self.bot.latency * 1000)
         elapsed_ms = round((time.time() - before_time) * 1000) - latency
         embed.add_field(name="ping", value=f"{elapsed_ms}ms")
         embed.add_field(name="latency", value=f"{latency}ms")
-        await interaction.response.edit_message(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
     async def uptime(self, interaction: discord.Interaction):
