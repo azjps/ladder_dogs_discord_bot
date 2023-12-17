@@ -4,7 +4,8 @@ import os
 default_config = {
     "discord_bot_token": "",
     "prefix": "!",
-    "database": "postgresql://localhost/postgres"
+    "database": "postgresql://localhost/postgres",
+    "debug": False
 }
 
 class Config:
@@ -19,6 +20,7 @@ class Config:
         self.prefix = self.config.get("prefix", default_config.get("prefix"))
         self.token = self.config.get("discord_bot_token", default_config.get("discord_bot_token"))
         self.database = os.getenv("DB_DSN")  # for docker
+        self.debug = self.config.get("debug", default_config.get("debug"))
         if not self.database:
             self.database = self.config.get("database", default_config.get("database"))
 

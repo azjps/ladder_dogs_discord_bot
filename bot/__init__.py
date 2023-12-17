@@ -59,10 +59,13 @@ async def on_ready():
         except AttributeError:
             pass
 
-    # Sync any slash commands to the server
-    # TODO: Don't run this by default in debug mode, to avoid spamming the Discord server in development
-    synced = await bot.tree.sync()
-    print(f"Synched {len(synced)} commands")
+    # Sync any slash commands to the server, if not in debug mode.
+    # This is to avoid getting rate-limited while doing a bunch of development restarts.
+    if utils.config.debug:
+        print("Debug mode, not syncing slash commands")
+    else:
+        synced = await bot.tree.sync()
+        print(f"Synched {len(synced)} commands")
 
 
 def setup_logger(log_level=logging.INFO):
