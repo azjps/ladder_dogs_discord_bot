@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from bot import utils
@@ -19,40 +20,37 @@ class Utility(commands.Cog):
     async def on_ready(self):
         print(f"{type(self).__name__} Cog ready.")
 
-    @commands.command()
-    async def ping(self, ctx):
+    @app_commands.command()
+    async def ping(self, interaction: discord.Interaction):
         """*Current ping and latency of the bot*
-        **Example**: `{prefix}ping`"""
+        **Example**: `/ping`"""
         embed = discord.Embed()
         before_time = time.time()
-        msg = await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
         latency = round(self.bot.latency * 1000)
         elapsed_ms = round((time.time() - before_time) * 1000) - latency
         embed.add_field(name="ping", value=f"{elapsed_ms}ms")
         embed.add_field(name="latency", value=f"{latency}ms")
-        await msg.edit(embed=embed)
+        await interaction.response.edit_message(embed=embed)
 
-    @commands.command()
-    async def uptime(self, ctx):
+    @app_commands.command()
+    async def uptime(self, interaction: discord.Interaction):
         """*Current uptime of the bot*
-        **Example**: `{prefix}uptime`"""
+        **Example**: `/uptime`"""
         current_time = datetime.now().replace(microsecond=0)
-        embed = discord.Embed(
-            description=f"Time since I went online: {current_time - self.start_time}."
-        )
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(f"Time since I went online: {current_time - self.start_time}.")
 
-    @commands.command()
-    async def starttime(self, ctx):
+    @app_commands.command()
+    async def starttime(self, interaction: discord.Interaction):
         """*When the bot was started*
-        **Example**: `{prefix}starttime`"""
+        **Example**: `/starttime`"""
         embed = discord.Embed(description=f"I'm up since {self.start_time}.")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
-    async def info_bot(self, ctx):
+    @app_commands.command()
+    async def info_bot(self, interaction: discord.Interaction):
         """*Shows stats and infos about the bot*
-        **Example**: `{prefix}info_bot`"""
+        **Example**: `/info_bot`"""
         embed = discord.Embed(title="LadderSpot")
         # embed.url = f"https://top.gg/bot/{self.bot.user.id}"
         embed.set_thumbnail(url=self.bot.user.avatar_url)
@@ -62,14 +60,7 @@ class Utility(commands.Cog):
             f"Guilds: {len(self.bot.guilds)}\n"
             f"Users: {len(self.bot.users)}\n"
             f"Shards: {self.bot.shard_count}\n"
-            f"Shard ID: {ctx.guild.shard_id}```",
-            inline=False,
-        )
-        embed.add_field(
-            name=f"Server Configuration",
-            value=f"```\n"
-            f"Prefix: {utils.config.prefix}\n"
-            f"```",
+            f"Shard ID: {interaction.guild.shard_id}```",
             inline=False,
         )
         embed.add_field(
@@ -86,17 +77,16 @@ class Utility(commands.Cog):
             inline=False,
         )
         embed.set_footer(text=":ladder: :dog:", icon_url=self.bot.user.avatar_url)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["socials", "links", "support"])
-    async def invite(self, ctx):
+    @app_commands.command()
+    async def invite(self, interaction: discord.Interaction):
         """*Shows invite link and other socials for the bot*
-        **Aliases**: `socials`, `links`, `support`
-        **Example**: `{prefix}invite`"""
+        **Example**: `/invite`"""
         embed = discord.Embed()
         embed.description = f"[Invite]({self.bot.invite})"
         embed.set_footer(text=":ladder: :dog:", icon_url=self.bot.user.avatar_url)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot):
