@@ -246,7 +246,10 @@ class Puzzles(commands.Cog):
                     await puzzle_data.update(
                         hunt_url = f"{hunt_round_base}/{hunt_name}"
                     ).apply()
-            await self.send_initial_puzzle_channel_messages(text_channel)
+            if channel_name == settings.discussion_channel:
+                await self.send_initial_discussion_channel_messages(text_channel)
+            else:
+                await self.send_initial_puzzle_channel_messages(text_channel)
 
             if channel_name != settings.discussion_channel or channel_name == "meta":
                 gsheet_cog = self.bot.get_cog("GoogleSheets")
@@ -302,12 +305,36 @@ class Puzzles(commands.Cog):
 • `!solve SOLUTION` will mark this puzzle as solved and archive this channel to #solved-puzzles
 • `!link <url>` will update the link to the puzzle on the hunt website
 • `!doc <url>` will update the Google Drive link
-* `!info` will re-post this message
+• `!info` will re-post this message
 • `!delete` should *only* be used if a channel was mistakenly created.
 • `!type crossword` will mark the type of the puzzle, for others to know
 • `!priority high` will mark the priority of the puzzle, for others to know
 • `!status extracting` will update the status of the puzzle, for others to know
 • `!note flavortext clues braille` can be used to leave a note about ideas/progress
+""",
+            inline=False,
+        )
+        await channel.send(embed=embed)
+
+    async def send_initial_discussion_channel_messages(self, channel: discord.TextChannel):
+        """Send intro message on a discussion (non-puzzle) channel"""
+        embed = discord.Embed(
+            description=f"""Welcome to the general discussion channel for {channel.category.mention}!"""
+        )
+        embed.add_field(
+            name="Overview",
+            value="This channel and the corresponding voice channel are goods places to discuss "
+            "the round itself. Usually you'll want to discuss individual puzzles in their "
+            "respective channels.",
+            inline=False,
+        )
+        embed.add_field(
+            name="Commands",
+            value="""The following may be useful discord commands:
+• `!puzzle PUZZLE NAME` will create a new puzzle in this round.
+• `!info` will re-post this message
+• `!status puzzle-name` will update the status of the round, for others to know
+• `!note flavortext clues braille` can be used to leave a note about ideas/progress in the round
 """,
             inline=False,
         )
@@ -346,7 +373,11 @@ class Puzzles(commands.Cog):
             await self.send_not_puzzle_channel(ctx)
             return
 
-        await self.send_initial_puzzle_channel_messages(ctx.channel)
+        settings = await database.query_hunt_settings(ctx.guild.id)
+        if ctx.channel.name == settings.discussion_channel:
+            await self.send_initial_discussion_channel_messages(ctx.channel)
+        else:
+            await self.send_initial_puzzle_channel_messages(ctx.channel)
 
     async def update_puzzle_attr_by_command(self, ctx, attr, value, message=None, reply=True):
         """Common pattern where we want to update a single field in PuzzleData based on command"""
