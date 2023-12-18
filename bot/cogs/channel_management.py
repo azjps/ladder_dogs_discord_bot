@@ -17,11 +17,10 @@ from bot.database.models import HuntSettings, PuzzleData
 
 logger = logging.getLogger(__name__)
 
-class Puzzles(SplatStoreCog):
+class ChannelManagement(SplatStoreCog):
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
     SOLVED_PUZZLES_CATEGORY_PREFIX = "SOLVED-"
-    PRIORITIES = ["low", "medium", "high", "very high"]
 
     def __init__(self, bot):
         self.bot = bot
@@ -80,48 +79,6 @@ class Puzzles(SplatStoreCog):
 
         settings = await database.query_hunt_settings(interaction.guild.id)
         await self.create_puzzle_channel(interaction, category.name, settings.discussion_channel)
-
-    @app_commands.command()
-    async def list_puzzles(self, interaction: discord.Interaction):
-        """*List all puzzles and their statuses*"""
-        if not (await self.check_is_bot_channel(interaction)):
-            return
-
-        all_puzzles = await PuzzleDb.get_all(interaction.guild.id)
-
-        embed = discord.Embed()
-        cur_round = None
-        message = ""
-
-        if len(all_puzzles) == 0:
-            cur_round = ""
-            message = "No puzzles to list"
-
-        # Create a message with a new embed field per round,
-        # listing all puzzles in the embed field
-        for puzzle in all_puzzles:
-            if cur_round is None:
-                cur_round = puzzle.round_name
-            if puzzle.round_name != cur_round or len(message) >= 512:
-                # Reached next round, add new embed field
-                embed.add_field(name=cur_round, value=message)
-                cur_round = puzzle.round_name
-                message = ""
-            message += f"{puzzle.channel_mention}"
-            if puzzle.puzzle_type:
-                message += f" type:{puzzle.puzzle_type}"
-            if puzzle.solution:
-                message += f" sol:**{puzzle.solution}**"
-            elif puzzle.status:
-                message += f" status:{puzzle.status}"
-            message += "\n"
-
-        if len(message) > 0:
-            # Add any dangling fields to our output
-            embed.add_field(name=cur_round, value=message)
-
-        if embed.fields:
-            await interaction.response.send_message(embed=embed)
 
     async def get_or_create_channel(
         self, guild, category: discord.CategoryChannel, channel_name: str, channel_type, **kwargs
@@ -193,10 +150,7 @@ class Puzzles(SplatStoreCog):
                     await puzzle_data.update(
                         hunt_url = f"{hunt_round_base}/{hunt_name}"
                     ).apply()
-            if channel_name == settings.discussion_channel:
-                await self.send_initial_discussion_channel_messages(text_channel)
-            else:
-                await self.send_initial_puzzle_channel_messages(text_channel)
+            await text_channel.send(embed=self.build_channel_info_message(settings.discussion_channel, text_channel))
 
             if channel_name != settings.discussion_channel or channel_name == "meta":
                 gsheet_cog = self.bot.get_cog("GoogleSheets")
@@ -234,21 +188,44 @@ class Puzzles(SplatStoreCog):
             )
         return (text_channel, voice_channel, created)
 
-    async def send_initial_puzzle_channel_messages(self, channel: discord.TextChannel):
-        """Send intro message on a puzzle channel"""
-        embed = discord.Embed(
-            description=f"""Welcome to the puzzle channel for {channel.mention} in {channel.category.mention}!"""
-        )
-        embed.add_field(
-            name="Overview",
-            value="This channel and the corresponding voice channel "
-            "are goods places to discuss how to tackle this puzzle. Usually you'll "
-            "want to do most of the puzzle work itself on Google Sheets / Docs.",
-            inline=False,
-        )
-        embed.add_field(
-            name="Commands",
-            value="""The following may be useful discord commands:
+    def build_channel_info_message(self, discussion_channel: str, channel: discord.TextChannel):
+        """Builds intro message for a puzzle or discussion channel"""
+        if channel.name == discussion_channel:
+            embed = discord.Embed(
+                description=f"""Welcome to the general discussion channel for {channel.category.mention}!"""
+            )
+            embed.add_field(
+                name="Overview",
+                value="This channel and the corresponding voice channel are goods places to discuss "
+                "the round itself. Usually you'll want to discuss individual puzzles in their "
+                "respective channels.",
+                inline=False,
+            )
+            embed.add_field(
+                name="Commands",
+                value="""The following may be useful discord commands:
+• `/puzzle PUZZLE NAME` will create a new puzzle in this round.
+• `/info` will re-post this message
+• `/status puzzle-name` will update the status of the round, for others to know
+• `/note flavortext clues braille` can be used to leave a note about ideas/progress in the round
+""",
+                inline=False,
+            )
+            return embed
+        else: # This is a puzzle channel
+            embed = discord.Embed(
+                description=f"""Welcome to the puzzle channel for {channel.mention} in {channel.category.mention}!"""
+            )
+            embed.add_field(
+                name="Overview",
+                value="This channel and the corresponding voice channel "
+                "are goods places to discuss how to tackle this puzzle. Usually you'll "
+                "want to do most of the puzzle work itself on Google Sheets / Docs.",
+                inline=False,
+            )
+            embed.add_field(
+                name="Commands",
+                value="""The following may be useful discord commands:
 • `/solve SOLUTION` will mark this puzzle as solved and archive this channel to #solved-puzzles
 • `/link <url>` will update the link to the puzzle on the hunt website
 • `/doc <url>` will update the Google Drive link
@@ -259,271 +236,12 @@ class Puzzles(SplatStoreCog):
 • `/status extracting` will update the status of the puzzle, for others to know
 • `/note flavortext clues braille` can be used to leave a note about ideas/progress
 """,
-            inline=False,
-        )
-        await channel.send(embed=embed)
-
-    async def send_initial_discussion_channel_messages(self, channel: discord.TextChannel):
-        """Send intro message on a discussion (non-puzzle) channel"""
-        embed = discord.Embed(
-            description=f"""Welcome to the general discussion channel for {channel.category.mention}!"""
-        )
-        embed.add_field(
-            name="Overview",
-            value="This channel and the corresponding voice channel are goods places to discuss "
-            "the round itself. Usually you'll want to discuss individual puzzles in their "
-            "respective channels.",
-            inline=False,
-        )
-        embed.add_field(
-            name="Commands",
-            value="""The following may be useful discord commands:
-• `/puzzle PUZZLE NAME` will create a new puzzle in this round.
-• `/info` will re-post this message
-• `/status puzzle-name` will update the status of the round, for others to know
-• `/note flavortext clues braille` can be used to leave a note about ideas/progress in the round
-""",
-            inline=False,
-        )
-        await channel.send(embed=embed)
+                inline=False,
+            )
+            return embed
 
     async def send_not_puzzle_channel(self, interaction):
         await interaction.response.send_message("This does not appear to be a puzzle channel")
-
-    async def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
-        """Extract puzzle data based on the channel name and category name
-
-        Looks up the corresponding JSON data
-        """
-        if not channel.category:
-            return None
-
-        guild = channel.guild
-        guild_id = guild.id
-        round_id = channel.category.id
-        round_name = channel.category.name
-        puzzle_id = channel.id
-        puzzle_name = channel.name
-        try:
-            return await PuzzleDb.get(guild_id, puzzle_id)
-        except MissingPuzzleError:
-            # Not the cleanest, just try to guess the original category id
-            # A DB would be useful here, then can directly query on solved_channel_id ..
-            logger.error(f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}")
-            return None
-
-    @app_commands.command()
-    async def info(self, interaction: discord.Interaction):
-        """*Show discord command help for a puzzle channel*"""
-        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-        if not puzzle_data:
-            await self.send_not_puzzle_channel(interaction)
-            return
-
-        settings = await database.query_hunt_settings(interaction.guild.id)
-        if interaction.channel.name == settings.discussion_channel:
-            await self.send_initial_discussion_channel_messages(interaction.channel)
-        else:
-            await self.send_initial_puzzle_channel_messages(interaction.channel)
-
-    async def update_puzzle_attr_by_command(self, interaction, attr, value, message=None, reply=True):
-        """Common pattern where we want to update a single field in PuzzleData based on command"""
-        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-        if not puzzle_data:
-            await self.send_not_puzzle_channel(interaction)
-            return
-
-        if puzzle_data.is_solved():
-            await interaction.response.send_message(
-                 ":warning: Please note that this puzzle has already been marked as solved, "
-                 f"with solution `{puzzle_data.solution}`"
-            )
-
-        message = message or attr
-        if value:
-            await puzzle_data.update(**{attr: value}).apply()
-            message = "Updated! " + message
-
-        if reply:
-            embed = discord.Embed(description=f"""{message}: {getattr(puzzle_data, attr)}""")
-            await interaction.response.send_message(embed=embed)
-        return puzzle_data
-
-    async def send_state(self, channel: discord.TextChannel, puzzle_data: PuzzleData, description=None):
-        """Send simple embed showing relevant links"""
-        embed = discord.Embed(description=description)
-        embed.add_field(name="Hunt URL", value=puzzle_data.hunt_url or "?")
-        spreadsheet_url = urls.spreadsheet_url(puzzle_data.google_sheet_id) if puzzle_data.google_sheet_id else "?"
-        embed.add_field(name="Google Drive", value=spreadsheet_url)
-        embed.add_field(name="Status", value=puzzle_data.status or "?")
-        embed.add_field(name="Type", value=puzzle_data.puzzle_type or "?")
-        embed.add_field(name="Priority", value=puzzle_data.priority or "?")
-        await channel.send(embed=embed)
-
-    @app_commands.command()
-    async def link(self, interaction: discord.Interaction, *, url: Optional[str]):
-        """*Show or update link to puzzle*"""
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "hunt_url", url, reply=False)
-        if puzzle_data:
-            await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
-            )
-
-    @app_commands.command()
-    async def sheet(self, interaction: discord.Interaction, *, url: Optional[str]):
-        """*Show or update link to google spreadsheet for puzzle*"""
-        file_id = None
-        if url:
-            file_id = urls.extract_id_from_url(url)
-            if not file_id:
-                interaction.response.send_message(f":exclamation: Invalid Google Drive URL, unable to extract file ID: {url}")
-
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "google_sheet_id", file_id, reply=False)
-        if puzzle_data:
-            await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
-            )
-
-    @app_commands.command()
-    async def note(self, interaction: discord.Interaction, *, note: Optional[str]):
-        """*Show or add a note about the puzzle*"""
-        embed = discord.Embed(description="Notes disabled for the moment, they'll probably be back?'")
-        await interaction.response.send_message(embed=embed)
-#        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-#        if not puzzle_data:
-#            await self.send_not_puzzle_channel(interaction)
-#            return
-#
-#        message = "Showing notes left by users!"
-#        if note:
-#            PuzzleJsonDb.commit(puzzle_data)
-#            puzzle_data.notes.append(f"{note} - {interaction.message.jump_url}")
-#            PuzzleJsonDb.commit(puzzle_data)
-#            message = (
-#                f"Added a new note! Use `/erase_note {len(puzzle_data.notes)}` to remove the note if needed. "
-#                f"Check `/note` for the current list of notes."
-#            )
-#
-#        if puzzle_data.notes:
-#            embed = discord.Embed(description=f"{message}")
-#            embed.add_field(
-#                name="Notes",
-#                value="\n".join([f"{i+1}: {puzzle_data.notes[i]}" for i in range(len(puzzle_data.notes))])
-#            )
-#        else:
-#            embed = discord.Embed(description="No notes left yet, use `/note my note here` to leave a note")
-#        await interaction.response.send_message(embed=embed)
-
-    @app_commands.command()
-    async def erase_note(self, interaction: discord.Interaction, note_index: int):
-        """*Remove a note by index*"""
-        embed = discord.Embed(description="Notes disabled for the moment, they'll probably be back?'")
-        await interaction.response.send_message(embed=embed)
-#        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-#        if not puzzle_data:
-#            await self.send_not_puzzle_channel(interaction)
-#            return
-#
-#        if 1 <= note_index <= len(puzzle_data.notes):
-#            note = puzzle_data.notes[note_index-1]
-#            del puzzle_data.notes[note_index - 1]
-#            PuzzleJsonDb.commit(puzzle_data)
-#            description = f"Erased note {note_index}: `{note}`"
-#        else:
-#            description = f"Unable to find note {note_index}"
-#
-#        embed = discord.Embed(description=description)
-#        embed.add_field(
-#            name="Notes",
-#            value="\n".join([f"{i+1}, {puzzle_data.notes[i]}" for i in range(len(puzzle_data.notes))])
-#        )
-#        await interaction.response.send_message(embed=embed)
-
-    @app_commands.command()
-    async def status(self, interaction: discord.Interaction, *, status: Optional[str]):
-        """*Show or update puzzle status, e.g. "extracting"*"""
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "status", status, reply=False)
-        if puzzle_data:
-            await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if status else None
-            )
-
-    @app_commands.command()
-    async def type(self, interaction: discord.Interaction, *, puzzle_type: Optional[str]):
-        """*Show or update puzzle type, e.g. "crossword"*"""
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "puzzle_type", puzzle_type, reply=False)
-        if puzzle_data:
-            await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if puzzle_type else None
-            )
-
-    @app_commands.command()
-    async def priority(self, interaction: discord.Interaction, *, priority: Optional[str]):
-        """*Show or update puzzle priority, one of "low", "medium", "high"*"""
-        if priority is not None and priority not in self.PRIORITIES:
-            await interaction.send(f":exclamation: Priority should be one of {self.PRIORITIES}, got \"{priority}\"")
-            return
-
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "priority", priority, reply=False)
-        if puzzle_data:
-            await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if priority else None
-            )
-
-    @app_commands.command()
-    async def solve(self, interaction: discord.Interaction, *, solution: str):
-        """*Mark puzzle as fully solved, after confirmation from HQ*"""
-        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-        if not puzzle_data:
-            await self.send_not_puzzle_channel(interaction)
-            return
-
-        solution = solution.strip().upper()
-        await puzzle_data.update(
-            status = "solved",
-            solution = solution,
-            solve_time = datetime.datetime.now(tz=pytz.UTC)
-        ).apply()
-
-        settings = await database.query_hunt_settings(interaction.guild.id)
-        emoji = settings.discord_bot_emoji
-        embed = discord.Embed(
-            description=f"{emoji} :partying_face: Great work! Marked the solution as `{solution}`"
-        )
-        delay = float(settings.archive_delay)/60
-        delay_str = "%g minute" % delay
-        if delay != 1.0:
-            delay_str = delay_str + "s"
-        embed.add_field(
-            name="Follow-up",
-            value="If the solution was mistakenly entered, please message `/unsolve`. "
-            f"Otherwise, in around {delay_str}, I will automatically archive this "
-            "puzzle channel to #solved-puzzles and archive the Google Spreadsheet",
-        )
-        await interaction.response.send_message(embed=embed)
-
-    @app_commands.command()
-    async def unsolve(self, interaction: discord.Interaction):
-        """*Mark an accidentally solved puzzle as not solved*"""
-        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-        if not puzzle_data:
-            await self.send_not_puzzle_channel(interaction)
-            return
-
-        prev_solution = puzzle_data.solution
-        await puzzle_data.update(
-            status = "unsolved",
-            solution = "",
-            solve_time = None
-        ).apply()
-
-        settings = await database.query_hunt_settings(interaction.guild.id)
-        emoji = settings.discord_bot_emoji
-        embed = discord.Embed(
-            description=f"{emoji} Alright, I've unmarked {prev_solution} as the solution. "
-            "You'll get'em next time!"
-        )
-        await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
     async def delete(self, interaction: discord.Interaction):
@@ -657,7 +375,7 @@ class Puzzles(SplatStoreCog):
 
         puzzles = await PuzzleDb.get_all(interaction.guild.id)
         # TODO: use a hunt identifier instead
-        puzzles_found = [p for p in puzzles if p.hunt_url.startswith(base_url)]
+        puzzles_found = [p for p in puzzles if p.hunt_url is not None and p.hunt_url.startswith(base_url)]
         if not puzzles_found:
             await interaction.response.send_message(f":exclamation: No puzzles found for {base_url}")
             return
@@ -691,16 +409,6 @@ class Puzzles(SplatStoreCog):
                 logger.exception(f"Unable to delete puzzle: {puzzle.name}")
 
         await interaction.response.send_message(f"Deleted {len(puzzles)} puzzle channels")
-
-    @app_commands.command()
-    async def debug_puzzle_channel(self, interaction: discord.Interaction):
-        """*(admin) See puzzle metadata*"""
-        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-        if not puzzle_data:
-            await self.send_not_puzzle_channel(interaction)
-            return
-
-        await interaction.response.send_message(f"```json\n{puzzle_data.name}```")
 
     async def delete_voice_channel(self, guild: discord.Guild, puzzle: PuzzleData, reason: Optional[str] = None):
         """If found, delete associated voice channel"""
@@ -812,4 +520,5 @@ class Puzzles(SplatStoreCog):
         logger.info("Ready to start archiving solved puzzles")
 
 async def setup(bot):
-    await bot.add_cog(Puzzles(bot))
+    await bot.add_cog(ChannelManagement(bot))
+
