@@ -1,4 +1,6 @@
 import textwrap
+from typing import Dict
+
 from bot.database import db
 
 
@@ -20,14 +22,19 @@ class HuntSettings(db.Model):
     archive_delay = db.Column(db.Integer, default = 300)            # Delay for items to be archived, in seconds
 
     # I don't love managing this way, but I can't find anything in SQLAlchemy about introspecting columns after they're created.
-    @classmethod
-    def column_type(cls, column_name):
+    def column_type(self, column_name):
         if column_name in [
             "guild_id",
             "discord_use_voice_channels",
             "archive_delay"]:
             return int
         return str
+
+    async def set(self, values: Dict[str, str]):
+        for key in values:
+            if self.column_type(key) == int:
+                values[key] = int(values[key])
+        await self.update(**values).apply()
 
     def to_json(self):
         return textwrap.dedent(f"""

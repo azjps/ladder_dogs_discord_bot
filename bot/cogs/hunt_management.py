@@ -31,9 +31,7 @@ class HuntManagement(SplatStoreCog):
         settings = await database.query_hunt_settings(guild_id)
         if hasattr(settings, setting_key):
             old_value = getattr(settings, setting_key)
-            if HuntSettings.column_type(setting_key) == int:
-                setting_value = int(setting_value)
-            await settings.update(**{setting_key: setting_value}).apply()
+            await settings.set({setting_key: setting_value})
             await interaction.response.send_message(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}`")
         else:
             await interaction.response.send_message(f":exclamation: Unrecognized setting key: `{setting_key}`. Use `/show_settings` for more info.")
