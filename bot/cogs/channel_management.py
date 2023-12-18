@@ -1,19 +1,16 @@
 import datetime
-import json
 import logging
 from typing import List, Optional
 
 import discord
-from discord.channel import VoiceChannel
 from discord import app_commands
 from discord.ext import commands, tasks
 import pytz
 
 from bot.splat_store_cog import SplatStoreCog
-from bot.data.puzzle_db import MissingPuzzleError, PuzzleDb
-from bot.utils import urls
+from bot.data.puzzle_db import PuzzleDb
 from bot import database
-from bot.database.models import HuntSettings, PuzzleData
+from bot.database.models import PuzzleData
 
 logger = logging.getLogger(__name__)
 

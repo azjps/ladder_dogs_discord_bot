@@ -1,11 +1,10 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 
-import discord
 from discord.ext import commands 
 
 from bot import database
-from bot.database.models import HuntSettings, PuzzleData
+from bot.database.models import PuzzleData
 from bot.data.puzzle_db import MissingPuzzleError, PuzzleDb
 
 logger = logging.getLogger(__name__)

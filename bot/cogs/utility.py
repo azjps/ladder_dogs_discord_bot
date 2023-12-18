@@ -5,9 +5,7 @@ import logging
 
 import discord
 from discord import app_commands
-from discord.ext import commands
 
-from bot import utils
 from bot.splat_store_cog import SplatStoreCog
 
 PY_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"

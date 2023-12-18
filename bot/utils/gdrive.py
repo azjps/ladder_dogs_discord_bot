@@ -1,7 +1,6 @@
 """
 aiogoogle utilities for finding and creating folders in Google Drive
 """
-import asyncio
 import json
 import logging
 from typing import Optional

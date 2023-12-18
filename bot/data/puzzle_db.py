@@ -1,11 +1,6 @@
-from dataclasses import dataclass, field
-from dataclasses_json import dataclass_json
 import datetime
-import errno
-import json
 import logging
-from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import pytz
 from bot import database

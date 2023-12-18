@@ -4,7 +4,6 @@ asyncio packages required: gspread_asyncio, oauth2client, google-api-python-clie
 non-asyncio: gspread, cryptography, oauth2client, google-api-python-client
 """
 from typing import Optional
-import asyncio
 import logging
 
 # asyncio imports

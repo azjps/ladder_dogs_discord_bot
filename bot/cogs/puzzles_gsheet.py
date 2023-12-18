@@ -5,19 +5,16 @@ This is a separate cog so that Google Drive integration
 can be easily disabled; simply omit this file.
 """
 
-import datetime
 import logging
 import string
-from typing import Optional
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import tasks
 import gspread_asyncio
 import gspread_formatting
-import pytz
 
 from bot.splat_store_cog import SplatStoreCog
-from bot.data.puzzle_db import MissingPuzzleError, PuzzleDb
+from bot.data.puzzle_db import PuzzleDb
 from bot.utils import urls
 from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager

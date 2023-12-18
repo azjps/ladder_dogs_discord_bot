@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import random
 from pathlib import Path
 
 import discord
