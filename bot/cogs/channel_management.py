@@ -353,7 +353,7 @@ class ChannelManagement(SplatStoreCog):
         )
         if voice_channel:
             await voice_channel.delete(reason=self.DELETE_REASON)
-        PuzzleDb.delete(puzzle_data)
+        await PuzzleDb.delete(puzzle_data)
         # delete text channel last so that errors can be reported
         await interaction.channel.delete(reason=self.DELETE_REASON)
 
@@ -404,7 +404,7 @@ class ChannelManagement(SplatStoreCog):
                         except discord.errors.NotFound:
                             logger.exception(f"Unable to delete text_channel {text_channel} for puzzle {puzzle.name}")
                     # Make sure the database entry is flagged as deleted.
-                    PuzzleDb.delete(puzzle)
+                    await PuzzleDb.delete(puzzle)
             except Exception:
                 logger.exception(f"Unable to delete puzzle: {puzzle.name}")
 
