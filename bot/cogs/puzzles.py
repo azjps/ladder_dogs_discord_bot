@@ -9,15 +9,15 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import pytz
 
+from bot.splat_store_cog import SplatStoreCog
+from bot.data.puzzle_db import MissingPuzzleError, PuzzleDb
 from bot.utils import urls
-from bot.utils.puzzles_db import MissingPuzzleError, PuzzleDb
 from bot import database
 from bot.database.models import HuntSettings, PuzzleData
 
 logger = logging.getLogger(__name__)
 
-class Puzzles(commands.Cog):
-    META_REASON = "bot-meta"
+class Puzzles(SplatStoreCog):
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
     SOLVED_PUZZLES_CATEGORY_PREFIX = "SOLVED-"
@@ -30,38 +30,12 @@ class Puzzles(commands.Cog):
         logger.info("Beginning loops")
         self.archived_solved_puzzles_loop.start()
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"{type(self).__name__} Cog ready.")
-
     def clean_name(self, name):
         """Cleanup name to be appropriate for discord channel"""
         name = name.strip()
         if (name[0] == name[-1]) and name.startswith(("'", '"')):
             name = name[1:-1]
         return "-".join(name.lower().split())
-
-    async def cog_app_command_error(self, interaction, error):
-        logger.exception(error)
-        if interaction.response.is_done():
-            await interaction.response.edit_message(":exclamation: " + str(error))
-        else:
-            await interaction.response.send_message(":exclamation: " + str(error))
-
-    async def check_is_bot_channel(self, interaction) -> bool:
-        """Check if command was sent to bot channel configured in settings"""
-        settings = await database.query_hunt_settings(interaction.guild.id)
-        if not settings.discord_bot_channel:
-            # If no channel is designated, then all channels are fine
-            # to listen to commands.
-            return True
-
-        if interaction.channel.name == settings.discord_bot_channel:
-            # Channel name matches setting (note, channel name might not be unique)
-            return True
-
-        await interaction.response.send_message(f":exclamation: Most bot commands should be sent to #{settings.discord_bot_channel}")
-        return False
 
     @app_commands.command()
     async def puzzle(self, interaction: discord.Interaction, *, hunt: Optional[str], puzzle: str):
@@ -107,29 +81,6 @@ class Puzzles(commands.Cog):
         settings = await database.query_hunt_settings(interaction.guild.id)
         await self.create_puzzle_channel(interaction, category.name, settings.discussion_channel)
 
-    @commands.has_permissions(manage_channels=True)
-    @app_commands.command()
-    async def show_settings(self, interaction: discord.Interaction):
-        """*(admin) Show guild-level settings*"""
-        guild_id = interaction.guild.id
-        settings = await database.query_hunt_settings(guild_id)
-        await interaction.response.send_message(f"```json\n{settings.to_json()}```")
-
-    @commands.has_permissions(manage_channels=True)
-    @app_commands.command()
-    async def update_setting(self, interaction: discord.Interaction, setting_key: str, setting_value: str):
-        """*(admin) Update guild setting: /update_setting key value*"""
-        guild_id = interaction.guild.id
-        settings = await database.query_hunt_settings(guild_id)
-        if hasattr(settings, setting_key):
-            old_value = getattr(settings, setting_key)
-            if HuntSettings.column_type(setting_key) == int:
-                setting_value = int(setting_value)
-            await settings.update(**{setting_key: setting_value}).apply()
-            await interaction.response.send_message(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}`")
-        else:
-            await interaction.response.send_message(f":exclamation: Unrecognized setting key: `{setting_key}`. Use `/show_settings` for more info.")
-
     @app_commands.command()
     async def list_puzzles(self, interaction: discord.Interaction):
         """*List all puzzles and their statuses*"""
@@ -137,7 +88,6 @@ class Puzzles(commands.Cog):
             return
 
         all_puzzles = await PuzzleDb.get_all(interaction.guild.id)
-        all_puzzles = PuzzleData.sort_by_round_start(all_puzzles)
 
         embed = discord.Embed()
         cur_round = None

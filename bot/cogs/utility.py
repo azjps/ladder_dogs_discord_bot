@@ -8,26 +8,16 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import utils
+from bot.splat_store_cog import SplatStoreCog
 
 PY_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
 
 logger = logging.getLogger(__name__)
 
-class Utility(commands.Cog):
+class Utility(SplatStoreCog):
     def __init__(self, bot):
         self.bot = bot
         self.start_time = datetime.now().replace(microsecond=0)
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"{type(self).__name__} Cog ready.")
-
-    async def cog_app_command_error(self, interaction, error):
-        logger.exception(error)
-        if interaction.response.is_done():
-            await interaction.response.edit_message(":exclamation: " + str(error))
-        else:
-            await interaction.response.send_message(":exclamation: " + str(error))
 
     @app_commands.command()
     async def ping(self, interaction: discord.Interaction):

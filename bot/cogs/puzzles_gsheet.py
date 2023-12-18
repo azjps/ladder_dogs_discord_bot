@@ -16,8 +16,9 @@ import gspread_asyncio
 import gspread_formatting
 import pytz
 
+from bot.splat_store_cog import SplatStoreCog
+from bot.data.puzzle_db import MissingPuzzleError, PuzzleDb
 from bot.utils import urls
-from bot.utils.puzzles_db import MissingPuzzleError, PuzzleDb
 from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
 from bot.utils.gsheet_nexus import update_nexus
@@ -27,7 +28,7 @@ from bot.database.models import HuntSettings, PuzzleData
 logger = logging.getLogger(__name__)
 
 
-class GoogleSheets(commands.Cog):
+class GoogleSheets(SplatStoreCog):
     agcm = get_manager()
 
     def __init__(self, bot):
@@ -36,10 +37,6 @@ class GoogleSheets(commands.Cog):
     def begin_loops(self):
         logger.info("Beginning loops")
         self.refresh_nexus.start()
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"{type(self).__name__} Cog ready.")
 
     def cap_name(self, name):
         """Capitalize name for easy comprehension"""

@@ -28,26 +28,6 @@ class PuzzleData(db.Model):
     delete_request = db.Column(db.DateTime(timezone=True))
     delete_time = db.Column(db.DateTime(timezone=True))
 
-    @classmethod
-    def sort_by_round_start(cls, puzzles: list) -> list:
-        """Return list of PuzzleData objects sorted by start of round time
-
-        Groups puzzles in the same round together, and sorts puzzles within round
-        by start_time.
-        """
-        round_start_times = {}
-
-        for puzzle in puzzles:
-            if puzzle.start_time is None:
-                continue
-
-            start_time = puzzle.start_time.timestamp()  # epoch time
-            round_start_time = round_start_times.get(puzzle.round_name)
-            if round_start_time is None or start_time < round_start_time:
-                round_start_times[puzzle.round_name] = start_time
-
-        return sorted(puzzles, key=lambda p: (round_start_times.get(p.round_name, 0), p.start_time or 0))
-
     def is_solved(self):
         return self.status == "solved" and self.solve_time is not None
 

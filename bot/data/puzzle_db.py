@@ -49,7 +49,7 @@ class PuzzleDb:
             (PuzzleData.guild_id == guild_id) &
             (PuzzleData.delete_time == None)
 		).gino.all()
-        return PuzzleData.sort_by_round_start(puzzle_datas)
+        return cls.sort_by_round_start(puzzle_datas)
 
     @classmethod
     async def get_solved_puzzles_to_archive(cls, guild_id, now=None, include_general: bool = False) -> List[PuzzleData]:
@@ -95,4 +95,24 @@ class PuzzleDb:
                     # enough time has passed, archive the channel
                     puzzles_to_delete.append(puzzle)
         return puzzles_to_delete
+
+    @classmethod
+    def sort_by_round_start(cls, puzzles: list) -> list:
+        """Return list of PuzzleData objects sorted by start of round time
+
+        Groups puzzles in the same round together, and sorts puzzles within round
+        by start_time.
+        """
+        round_start_times = {}
+
+        for puzzle in puzzles:
+            if puzzle.start_time is None:
+                continue
+
+            start_time = puzzle.start_time.timestamp()  # epoch time
+            round_start_time = round_start_times.get(puzzle.round_name)
+            if round_start_time is None or start_time < round_start_time:
+                round_start_times[puzzle.round_name] = start_time
+
+        return sorted(puzzles, key=lambda p: (round_start_times.get(p.round_name, 0), p.start_time or 0))
 
