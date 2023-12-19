@@ -32,9 +32,14 @@ async def query_guild(guild_id: int):
 
 async def query_hunt_settings(guild_id: int):
     """query hunt settings, create if not exist"""
-    settings = await models.HuntSettings.get(guild_id)
+    settings = await models.HuntSettings.query.where(
+        (models.HuntSettings.guild_id == guild_id)
+    ).gino.first()
     if settings is None:
-        settings = await models.HuntSettings.create(guild_id=guild_id)
+        settings = await models.HuntSettings.create()
+        await settings.update(
+            guild_id=guild_id
+        ).apply()
     return settings
 
 async def query_puzzle_data(guild_id: int, channel_id: int):
