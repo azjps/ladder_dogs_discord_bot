@@ -52,7 +52,7 @@ class PuzzleDb:
         all_puzzles = await cls.get_all(guild_id)
         now = now or datetime.datetime.now(tz=pytz.UTC)
         puzzles_to_archive = []
-        settings = await database.query_hunt_settings(guild_id)
+        settings = await database.query_guild(guild_id)
         delay_in_seconds = settings.archive_delay
         for puzzle in all_puzzles:
             if puzzle.archive_time is not None:
@@ -74,7 +74,7 @@ class PuzzleDb:
         all_puzzles = await cls.get_all(guild_id)
         now = datetime.datetime.now(tz=pytz.UTC)
         puzzles_to_delete = []
-        settings = await database.query_hunt_settings(guild_id)
+        settings = await database.query_guild(guild_id)
         for puzzle in all_puzzles:
             if puzzle.solve_time is not None or puzzle.archive_time is not None:
                 # already archived

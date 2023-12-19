@@ -10,25 +10,25 @@ from bot.database.models import HuntSettings
 
 logger = logging.getLogger(__name__)
 
-class HuntManagement(SplatStoreCog):
+class GuildManagement(SplatStoreCog):
 
     def __init__(self, bot):
         self.bot = bot
 
     @commands.has_permissions(manage_channels=True)
     @app_commands.command()
-    async def show_hunt_settings(self, interaction: discord.Interaction):
+    async def show_settings(self, interaction: discord.Interaction):
         """*(admin) Show guild-level settings*"""
         guild_id = interaction.guild.id
-        settings = await database.query_hunt_settings(guild_id)
+        settings = await database.query_guild(guild_id)
         await interaction.response.send_message(f"```json\n{settings.to_json()}```")
 
     @commands.has_permissions(manage_channels=True)
     @app_commands.command()
-    async def update_hunt_setting(self, interaction: discord.Interaction, setting_key: str, setting_value: str):
+    async def update_setting(self, interaction: discord.Interaction, setting_key: str, setting_value: str):
         """*(admin) Update guild setting: /update_setting key value*"""
         guild_id = interaction.guild.id
-        settings = await database.query_hunt_settings(guild_id)
+        settings = await database.query_guild(guild_id)
         if hasattr(settings, setting_key):
             old_value = getattr(settings, setting_key)
             await settings.set({setting_key: setting_value})
@@ -36,10 +36,5 @@ class HuntManagement(SplatStoreCog):
         else:
             await interaction.response.send_message(f":exclamation: Unrecognized setting key: `{setting_key}`. Use `/show_settings` for more info.")
 
-    @app_commands.command()
-    async def hunt(self, interaction: discord.Interaction, hunt_url: str, hunt_name: str):
-        """* Create a new hunt*"""
-        await interaction.response.send_message("Not yet implemented")
-
 async def setup(bot):
-    await bot.add_cog(HuntManagement(bot))
+    await bot.add_cog(GuildManagement(bot))

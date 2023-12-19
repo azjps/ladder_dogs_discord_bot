@@ -20,7 +20,7 @@ from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
 from bot.utils.gsheet_nexus import update_nexus
 from bot import database
-from bot.database.models import HuntSettings, PuzzleData
+from bot.database.models import Guild, HuntSettings, PuzzleData
 
 logger = logging.getLogger(__name__)
 
@@ -47,14 +47,14 @@ class GoogleSheets(SplatStoreCog):
             # Distinguish metas between different rounds
             name = f"{name} ({round_name})"
 
-        settings = await database.query_hunt_settings(guild_id)
-        if not settings.drive_parent_id:
+        hunt_settings = await database.query_hunt_settings(guild_id)
+        if not hunt_settings.drive_hunt_folder_id:
             return
 
         try:
             # create drive folder if needed
             round_folder = await get_or_create_folder(
-                name=round_name, parent_id=settings.drive_parent_id
+                name=round_name, parent_id=hunt_settings.drive_hunt_folder_id
             )
             round_folder_id = round_folder["id"]
 
@@ -67,8 +67,8 @@ class GoogleSheets(SplatStoreCog):
             # inform spreadsheet creation
             puzzle_url = puzzle.hunt_url
             sheet_url = urls.spreadsheet_url(spreadsheet.id)
-            settings = await database.query_hunt_settings(guild_id)
-            emoji = settings.discord_bot_emoji
+            guild_settings = await database.query_guild(guild_id)
+            emoji = guild_settings.discord_bot_emoji
             embed = discord.Embed(
                 description=
                 f"{emoji} I've created a spreadsheet for you at {sheet_url}. "
@@ -79,7 +79,7 @@ class GoogleSheets(SplatStoreCog):
             await text_channel.send(embed=embed)
 
             # add some helpful links
-            await self.add_quick_links_worksheet(spreadsheet, puzzle, settings)
+            await self.add_quick_links_worksheet(spreadsheet, puzzle, guild_settings, hunt_settings)
 
         except Exception as exc:
             logger.exception(f"Unable to create spreadsheet for {round_name}/{name}")
@@ -94,16 +94,16 @@ class GoogleSheets(SplatStoreCog):
         cell_range[(row - 1) * 2 + 1].value = value
 
     async def add_quick_links_worksheet(
-        self, spreadsheet: gspread_asyncio.AsyncioGspreadSpreadsheet, puzzle: PuzzleData, settings: HuntSettings
+        self, spreadsheet: gspread_asyncio.AsyncioGspreadSpreadsheet, puzzle: PuzzleData, guild_settings: GuildSettings, hunt_settings: HuntSettings
     ):
         worksheet = await spreadsheet.add_worksheet(title="Quick Links", rows=10, cols=2)
         cell_range = await worksheet.range(1, 1, 10, 2)
 
         self.update_cell_row(cell_range, 1, "Hunt URL", puzzle.hunt_url)
         self.update_cell_row(cell_range, 2, "Drive folder", urls.drive_folder_url(puzzle.google_folder_id))
-        nexus_url = urls.spreadsheet_url(settings.drive_nexus_sheet_id) if settings.drive_nexus_sheet_id else ""
+        nexus_url = urls.spreadsheet_url(hunt_settings.drive_nexus_sheet_id) if hunt_settings.drive_nexus_sheet_id else ""
         self.update_cell_row(cell_range, 3, "Nexus", nexus_url)
-        resources_url = urls.docs_url(settings.drive_resources_id) if settings.drive_resources_id else ""
+        resources_url = urls.docs_url(guild_settings.drive_resources_id) if guild_settings.drive_resources_id else ""
         self.update_cell_row(cell_range, 4, "Resources", resources_url)
         self.update_cell_row(cell_range, 5, "Discord channel mention", puzzle.channel_mention)
         self.update_cell_row(
@@ -129,10 +129,10 @@ class GoogleSheets(SplatStoreCog):
     async def refresh_nexus(self):
         """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
         for guild in self.bot.guilds:
-            settings = await database.query_hunt_settings(guild.id)
-            if settings.drive_nexus_sheet_id:
+            hunt_settings = await database.query_hunt_settings(guild.id)
+            if hunt_settings.drive_nexus_sheet_id:
                 puzzles = await PuzzleDb.get_all(guild.id)
-                await update_nexus(agcm=self.agcm, file_id=settings.drive_nexus_sheet_id, puzzles=puzzles)
+                await update_nexus(agcm=self.agcm, file_id=hunt_settings.drive_nexus_sheet_id, puzzles=puzzles)
 
     @refresh_nexus.before_loop
     async def before_refreshing_nexus(self):

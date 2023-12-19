@@ -30,7 +30,7 @@ class SplatStoreCog(commands.Cog):
 
     async def check_is_bot_channel(self, interaction) -> bool:
         """Check if command was sent to bot channel configured in settings"""
-        settings = await database.query_hunt_settings(interaction.guild.id)
+        settings = await database.query_guild(interaction.guild.id)
         if not settings.discord_bot_channel:
             # If no channel is designated, then all channels are fine
             # to listen to commands.

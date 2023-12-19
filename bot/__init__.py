@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from bot import utils, database
-from bot.database.models import Guild
+from bot.database.models import GuildSettings
 
 __version__ = "0.1.0"
 
@@ -29,7 +29,7 @@ bot.guild_data = {}
 
 
 async def preload_guild_data():
-    guilds = await Guild.query.gino.all()
+    guilds = await GuildSettings.query.gino.all()
     d = dict()
     for guild in guilds:
         d[guild.id] = {"prefix": guild.prefix}

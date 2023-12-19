@@ -40,7 +40,7 @@ class ChannelManagement(SplatStoreCog):
         Can be posted in either a #general channel or the bot channel
         """
         guild = interaction.guild
-        settings = await database.query_hunt_settings(interaction.guild.id)
+        settings = await database.query_guild(interaction.guild.id)
         if (interaction.channel.name == settings.discussion_channel) and (interaction.channel.category.name != "Text Channels"):
             category = interaction.channel.category
             if hunt is None:
@@ -74,7 +74,7 @@ class ChannelManagement(SplatStoreCog):
                 new_position = len(guild.categories)
             category = await guild.create_category(category_name, position=new_position)
 
-        settings = await database.query_hunt_settings(interaction.guild.id)
+        settings = await database.query_guild(interaction.guild.id)
         await self.create_puzzle_channel(interaction, category.name, settings.discussion_channel)
 
     async def get_or_create_channel(
@@ -117,7 +117,8 @@ class ChannelManagement(SplatStoreCog):
         text_channel, created_text = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=channel_name, channel_type="text", reason=self.PUZZLE_REASON
         )
-        settings = await database.query_hunt_settings(guild.id)
+        guild_settings = await database.query_guild(guild.id)
+        hunt_settings = await database.query_hunt_settings(guild.id)
         if created_text:
             puzzle_data = await database.query_puzzle_data(guild_id = interaction.guild.id, channel_id = text_channel.id)
             await puzzle_data.update(
@@ -128,28 +129,28 @@ class ChannelManagement(SplatStoreCog):
                 channel_mention=text_channel.mention,
                 start_time=datetime.datetime.now(tz=pytz.UTC)
             ).apply()
-            if settings.hunt_url:
+            if hunt_settings.hunt_url:
                 # NOTE: this is a heuristic and may need to be updated!
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
-                hunt_url_base = settings.hunt_url.rstrip("/")
-                if channel_name == settings.discussion_channel:
+                hunt_url_base = hunt_settings.hunt_url.rstrip("/")
+                if channel_name == guild_settings.discussion_channel:
                     # Use the round name in the URL
-                    hunt_name = category_name.lower().replace("-", settings.hunt_url_sep)
+                    hunt_name = category_name.lower().replace("-", hunt_settings.hunt_url_sep)
                     hunt_round_base = hunt_url_base
-                    if settings.hunt_round_url:
-                        hunt_round_base = settings.hunt_round_url.rstrip("/")
+                    if hunt_settings.hunt_round_url:
+                        hunt_round_base = hunt_settings.hunt_round_url.rstrip("/")
                     await puzzle_data.update(
                         hunt_url = f"{hunt_round_base}/{hunt_name}"
                     ).apply()
                 else:
-                    hunt_name = channel_name.replace("-", settings.hunt_url_sep)
+                    hunt_name = channel_name.replace("-", hunt_settings.hunt_url_sep)
                     await puzzle_data.update(
                         hunt_url = f"{hunt_round_base}/{hunt_name}"
                     ).apply()
-            await text_channel.send(embed=self.build_channel_info_message(settings.discussion_channel, text_channel))
+            await text_channel.send(embed=self.build_channel_info_message(guild_settings.discussion_channel, text_channel))
 
-            if channel_name != settings.discussion_channel or channel_name == "meta":
+            if channel_name != guild_settings.discussion_channel or channel_name == "meta":
                 gsheet_cog = self.bot.get_cog("GoogleSheets")
                 if gsheet_cog is not None:
                     # update google sheet ID
@@ -158,7 +159,7 @@ class ChannelManagement(SplatStoreCog):
             puzzle_data = await self.get_puzzle_data_from_channel(text_channel)
 
         created_voice = False
-        if settings.discord_use_voice_channels:
+        if guild_settings.discord_use_voice_channels:
             voice_channel, created_voice = await self.get_or_create_channel(
                 guild=guild, category=category, channel_name=channel_name, channel_type="voice", reason=self.PUZZLE_REASON
             )
@@ -254,7 +255,7 @@ class ChannelManagement(SplatStoreCog):
         await PuzzleDb.request_delete(puzzle_data)
         logger.info(f"Scheduling deletion for puzzle: {puzzle_data.name}")
 
-        settings = await database.query_hunt_settings(interaction.guild.id)
+        settings = await database.query_guild(interaction.guild.id)
         emoji = settings.discord_bot_emoji
         embed = discord.Embed(
             description=f"{emoji} :recycle: Okay {interaction.user.mention}, I will permanently delete this channel in ~5 minutes."
@@ -299,7 +300,7 @@ class ChannelManagement(SplatStoreCog):
             ).apply()
             logger.info(f"Un-scheduling deletion for puzzle: {puzzle_data.name}")
 
-            settings = await database.query_hunt_settings(interaction.guild.id)
+            settings = await database.query_guild(interaction.guild.id)
             emoji = settings.discord_bot_emoji
             await interaction.response.send_message(f"{emoji} Noted, will no longer be deleting this channel.")
         else:

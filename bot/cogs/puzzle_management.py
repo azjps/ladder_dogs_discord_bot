@@ -80,7 +80,7 @@ class PuzzleManagement(SplatStoreCog):
             await self.send_not_puzzle_channel(interaction)
             return
 
-        settings = await database.query_hunt_settings(interaction.guild.id)
+        settings = await database.query_guild(interaction.guild.id)
         channel_cog = self.bot.get_cog("ChannelManagement")
         if channel_cog is None:
             raise GeneralAppError(f"Unable to contact other cogs -- perhaps the server is misconfigured?")
@@ -245,7 +245,7 @@ class PuzzleManagement(SplatStoreCog):
             solve_time = datetime.datetime.now(tz=pytz.UTC)
         ).apply()
 
-        settings = await database.query_hunt_settings(interaction.guild.id)
+        settings = await database.query_guild(interaction.guild.id)
         emoji = settings.discord_bot_emoji
         embed = discord.Embed(
             description=f"{emoji} :partying_face: Great work! Marked the solution as `{solution}`"
@@ -277,7 +277,7 @@ class PuzzleManagement(SplatStoreCog):
             solve_time = None
         ).apply()
 
-        settings = await database.query_hunt_settings(interaction.guild.id)
+        settings = await database.query_guild(interaction.guild.id)
         emoji = settings.discord_bot_emoji
         embed = discord.Embed(
             description=f"{emoji} Alright, I've unmarked {prev_solution} as the solution. "
