@@ -24,16 +24,17 @@ async def shutdown():
 
 
 async def query_guild(guild_id: int):
-    """query guild, create if not exist"""
+    """query guild, create if it does not exist"""
     guild = await models.GuildSettings.get(guild_id)
     if guild is None:
         guild = await models.GuildSettings.create(id=guild_id)
     return guild
 
-async def query_hunt_settings(guild_id: int):
-    """query hunt settings, create if not exist"""
+async def query_hunt_settings_by_name(guild_id: int, hunt_name: str):
+    """query hunt settings, create if it does not exist"""
     settings = await models.HuntSettings.query.where(
-        (models.HuntSettings.guild_id == guild_id)
+        (models.HuntSettings.guild_id == guild_id) &
+        (models.HuntSettings.hunt_name == hunt_name)
     ).gino.first()
     if settings is None:
         settings = await models.HuntSettings.create()
@@ -42,8 +43,13 @@ async def query_hunt_settings(guild_id: int):
         ).apply()
     return settings
 
+async def query_hunt_settings_by_round(guild_id: int, round_channel: int):
+        round_data = await query_round_data(guild_id, round_channel)
+        hunt_name = await round_data.hunt_name();
+        return await query_hunt_settings_by_name(guild_id, hunt_name)
+
 async def query_puzzle_data(guild_id: int, channel_id: int):
-    """query puzzle data, create if not exist"""
+    """query puzzle data, create if it does not exist"""
     puzzle = await models.PuzzleData.query.where(
         (models.PuzzleData.guild_id == guild_id) &
         (models.PuzzleData.channel_id == channel_id)

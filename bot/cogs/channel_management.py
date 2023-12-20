@@ -118,7 +118,7 @@ class ChannelManagement(SplatStoreCog):
             guild=guild, category=category, channel_name=channel_name, channel_type="text", reason=self.PUZZLE_REASON
         )
         guild_settings = await database.query_guild(guild.id)
-        hunt_settings = await database.query_hunt_settings(guild.id)
+        hunt_settings = await database.query_hunt_settings_by_round(guild.id, category.id)
         if created_text:
             puzzle_data = await database.query_puzzle_data(guild_id = interaction.guild.id, channel_id = text_channel.id)
             await puzzle_data.update(
@@ -447,6 +447,8 @@ class ChannelManagement(SplatStoreCog):
             )
             solved_category = await guild.create_category(solved_category_name, position=position)
 
+        round_data = await database.query_round_data(guild.id, puzzle.round_id)
+        await round_data.update(solved_category_id = solved_category).apply()
         return solved_category
 
     async def archive_solved_puzzles(self, guild: discord.Guild) -> List[PuzzleData]:

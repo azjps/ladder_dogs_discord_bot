@@ -1,4 +1,5 @@
 from bot.database import db
+from bot.database.models import HuntSettings
 
 
 class RoundData(db.Model):
@@ -10,3 +11,6 @@ class RoundData(db.Model):
     solved_category_id = db.Column(db.BIGINT, default=0)
     hunt_id = db.Column(db.BIGINT, default=0)
  
+    async def hunt_name(self):
+        hunt = await HuntSettings.get(self.hunt_id)
+        return hunt.hunt_name

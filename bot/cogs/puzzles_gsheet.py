@@ -47,7 +47,7 @@ class GoogleSheets(SplatStoreCog):
             # Distinguish metas between different rounds
             name = f"{name} ({round_name})"
 
-        hunt_settings = await database.query_hunt_settings(guild_id)
+        hunt_settings = await database.query_hunt_settings_by_round(guild_id, puzzle.round_id)
         if not hunt_settings.drive_hunt_folder_id:
             return
 
@@ -128,11 +128,12 @@ class GoogleSheets(SplatStoreCog):
     @tasks.loop(seconds=60.0)
     async def refresh_nexus(self):
         """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
-        for guild in self.bot.guilds:
-            hunt_settings = await database.query_hunt_settings(guild.id)
-            if hunt_settings.drive_nexus_sheet_id:
+        hunts = await HuntSettings.query.gino.all()
+        for hunt in hunts:
+            if hunt.drive_nexus_sheet_id:
+                # TODO: Only get puzzles applicable for this hunt
                 puzzles = await PuzzleDb.get_all(guild.id)
-                await update_nexus(agcm=self.agcm, file_id=hunt_settings.drive_nexus_sheet_id, puzzles=puzzles)
+                await update_nexus(agcm=self.agcm, file_id=hunt.drive_nexus_sheet_id, puzzles=puzzles)
 
     @refresh_nexus.before_loop
     async def before_refreshing_nexus(self):

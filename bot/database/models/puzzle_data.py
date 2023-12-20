@@ -31,4 +31,3 @@ class PuzzleData(db.Model):
     def is_solved(self):
         return self.status == "solved" and self.solve_time is not None
 
-

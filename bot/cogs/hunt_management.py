@@ -20,7 +20,7 @@ class HuntManagement(SplatStoreCog):
     async def show_hunt_settings(self, interaction: discord.Interaction):
         """*(admin) Show guild-level settings*"""
         guild_id = interaction.guild.id
-        settings = await database.query_hunt_settings(guild_id)
+        settings = await database.query_hunt_settings_by_round(guild_id, interaction.channel.category.id)
         await interaction.response.send_message(f"```json\n{settings.to_json()}```")
 
     @commands.has_permissions(manage_channels=True)
@@ -28,7 +28,7 @@ class HuntManagement(SplatStoreCog):
     async def update_hunt_setting(self, interaction: discord.Interaction, setting_key: str, setting_value: str):
         """*(admin) Update guild setting: /update_setting key value*"""
         guild_id = interaction.guild.id
-        settings = await database.query_hunt_settings(guild_id)
+        settings = await database.query_hunt_settings_by_round(guild_id, interaction.channel.category.id)
         if hasattr(settings, setting_key):
             old_value = getattr(settings, setting_key)
             await settings.set({setting_key: setting_value})
@@ -43,3 +43,4 @@ class HuntManagement(SplatStoreCog):
 
 async def setup(bot):
     await bot.add_cog(HuntManagement(bot))
+
