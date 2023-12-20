@@ -55,3 +55,17 @@ async def query_puzzle_data(guild_id: int, channel_id: int):
             channel_id = channel_id
         ).apply()
     return puzzle
+
+async def query_round_data(guild_id: int, category_id: int):
+    """query round data, create if it does not exist"""
+    round = await models.RoundData.query.where(
+        (models.RoundData.category_id == category_id) |
+        (models.RoundData.solved_category_id == category_id)
+    ).gino.first()
+    if round is None:
+        round = await models.RoundData.create()
+        await round.update(
+            category_id = category_id
+        ).apply()
+    return round
+
