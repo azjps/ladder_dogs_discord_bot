@@ -20,7 +20,7 @@ from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
 from bot.utils.gsheet_nexus import update_nexus
 from bot import database
-from bot.database.models import Guild, HuntSettings, PuzzleData
+from bot.database.models import GuildSettings, HuntSettings, PuzzleData
 
 logger = logging.getLogger(__name__)
 

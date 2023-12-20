@@ -1,12 +1,14 @@
+﻿from datetime import datetime
+import logging
+import random
 import sys
 import time
-from datetime import datetime
-import logging
+from typing import Optional
 
 import discord
 from discord import app_commands
 
-from bot.splat_store_cog import SplatStoreCog
+from bot.splat_store_cog import SplatStoreCog, GeneralAppError
 
 PY_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
 
@@ -84,6 +86,35 @@ class Utility(SplatStoreCog):
         embed.set_footer(text=":ladder: :dog:", icon_url=self.bot.user.avatar_url)
         await interaction.response.send_message(embed=embed)
 
+
+    # Based on code found here: https://stackoverflow.com/a/73967436, improved upon thereafter
+    @app_commands.command()
+    @app_commands.describe(command = "The command to get help for")
+    async def help(self, interaction: discord.Interaction, *, command: Optional[str]):
+        """*Shows help for a given command*
+        **Example**: `/help help`'"""
+        if command is not None:
+            await interaction.response.send_message(embed=self.single_command_help(command))
+            return
+        await interaction.response.send_message(embed=self.general_help())
+
+    def single_command_help(self, command: str):
+        for c in self.bot.tree.get_commands():
+            if c.name == command:
+                command = c
+                break
+        try:
+            return discord.Embed(title=command.name,description=command.description)
+        except AttributeError: # if command is not found
+            raise GeneralAppError(f"Command {command} not found")
+        return None
+
+    def general_help(self):
+        names = [command.name for command in self.bot.tree.get_commands()]
+        available_commands = "\n".join(sorted(names))
+        embed = discord.Embed(title=f"Commands ({len(names)}):",description=available_commands)
+        embed.set_footer(text=f"🛈  /help <command> (e.g /help {random.choice(names)})")
+        return embed
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))
