@@ -22,6 +22,16 @@ class HuntSettings(db.Model):
             return int
         return str
 
+    @classmethod
+    async def get_id_for_name(cls, guild_id: int, name: str):
+        hunt = await HuntSettings.query.where(
+            (HuntSettings.name == name) &
+            (HuntSettings.guild_id == guild_id)
+        ).gino.first()
+        if hunt is None:
+            return None
+        return hunt.id
+
     async def set(self, values: Dict[str, str]):
         for key in values:
             if self.column_type(key) == int:

@@ -10,7 +10,7 @@ import pytz
 from bot.splat_store_cog import SplatStoreCog
 from bot.data.puzzle_db import PuzzleDb
 from bot import database
-from bot.database.models import PuzzleData
+from bot.database.models import PuzzleData, RoundData
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class ChannelManagement(SplatStoreCog):
         return "-".join(name.lower().split())
 
     @app_commands.command()
-    async def puzzle(self, interaction: discord.Interaction, *, hunt: Optional[str], puzzle: str):
+    async def puzzle(self, interaction: discord.Interaction, *, hunt_round: Optional[str], puzzle: str):
         """*Create new puzzle channels: /puzzle round-name: puzzle-name*
 
         Can be posted in either a #general channel or the bot channel
@@ -43,23 +43,22 @@ class ChannelManagement(SplatStoreCog):
         settings = await database.query_guild(interaction.guild.id)
         if (interaction.channel.name == settings.discussion_channel) and (interaction.channel.category.name != "Text Channels"):
             category = interaction.channel.category
-            if hunt is None:
-                hunt = category.name
-            if hunt != category.name:
-                raise ValueError(f"Unexpected round: {hunt}, expected: {category.name}")
-            return await self.create_puzzle_channel(interaction, hunt, puzzle)
+            if hunt_round is None:
+                hunt_round = category.name
+            if hunt_round != category.name:
+                raise ValueError(f"Unexpected round: {hunt_round}, expected: {category.name}")
+            return await self.create_puzzle_channel(interaction, hunt_round, puzzle)
 
         if not (await self.check_is_bot_channel(interaction)):
             return
 
-        if hunt is None:
-            raise ValueError(f"Unable to parse puzzle name {arg}, try using `/puzzle round-name: puzzle-name`")
+        if hunt_round is None:
+            raise ValueError(f"Unable to parse puzzle name {arg}, try using `/puzzle round-name puzzle-name`")
 
-        return await self.create_puzzle_channel(interaction, hunt, puzzle)
-
+        return await self.create_puzzle_channel(interaction, hunt_round, puzzle)
 
     @app_commands.command()
-    async def round(self, interaction: discord.Interaction, *, category_name: str):
+    async def round(self, interaction: discord.Interaction, *, category_name: str, hunt_name: Optional[str]):
         """*Create new puzzle round: /round round-name*"""
         if not (await self.check_is_bot_channel(interaction)):
             return
@@ -73,6 +72,13 @@ class ChannelManagement(SplatStoreCog):
             if new_position < 1:
                 new_position = len(guild.categories)
             category = await guild.create_category(category_name, position=new_position)
+            await RoundData.create_round(
+                guild_id = guild.id,
+                from_category = interaction.channel.category.id,
+                category = category.id,
+                name = category_name,
+                hunt = hunt_name
+            )
 
         settings = await database.query_guild(interaction.guild.id)
         await self.create_puzzle_channel(interaction, category.name, settings.discussion_channel)
@@ -448,7 +454,7 @@ class ChannelManagement(SplatStoreCog):
             solved_category = await guild.create_category(solved_category_name, position=position)
 
         round_data = await database.query_round_data(guild.id, puzzle.round_id)
-        await round_data.update(solved_category_id = solved_category).apply()
+        await round_data.update(solved_category_id = solved_category.id).apply()
         return solved_category
 
     async def archive_solved_puzzles(self, guild: discord.Guild) -> List[PuzzleData]:

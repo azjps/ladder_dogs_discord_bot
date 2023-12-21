@@ -45,8 +45,11 @@ async def query_hunt_settings_by_name(guild_id: int, hunt_name: str):
 
 async def query_hunt_settings_by_round(guild_id: int, round_channel: int):
         round_data = await query_round_data(guild_id, round_channel)
-        hunt_name = await round_data.hunt_name();
-        return await query_hunt_settings_by_name(guild_id, hunt_name)
+        hunt = await models.HuntSettings.get(round_data.hunt_id)
+        if hunt is None:
+            hunt = await models.HuntSettings.create()
+            await round_data.update(hunt_id = hunt.id).apply()
+        return hunt
 
 async def query_puzzle_data(guild_id: int, channel_id: int):
     """query puzzle data, create if it does not exist"""
@@ -64,14 +67,5 @@ async def query_puzzle_data(guild_id: int, channel_id: int):
 
 async def query_round_data(guild_id: int, category_id: int):
     """query round data, create if it does not exist"""
-    round = await models.RoundData.query.where(
-        (models.RoundData.category_id == category_id) |
-        (models.RoundData.solved_category_id == category_id)
-    ).gino.first()
-    if round is None:
-        round = await models.RoundData.create()
-        await round.update(
-            category_id = category_id
-        ).apply()
-    return round
+    return await models.RoundData.get_or_create(category_id)
 
