@@ -39,7 +39,8 @@ async def query_hunt_settings_by_name(guild_id: int, hunt_name: str):
     if settings is None:
         settings = await models.HuntSettings.create()
         await settings.update(
-            guild_id=guild_id
+            guild_id=guild_id,
+            hunt_name = hunt_name
         ).apply()
     return settings
 

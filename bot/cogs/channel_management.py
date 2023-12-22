@@ -60,6 +60,21 @@ class ChannelManagement(SplatStoreCog):
     @app_commands.command()
     async def round(self, interaction: discord.Interaction, *, category_name: str, hunt_name: Optional[str]):
         """*Create new puzzle round: /round round-name*"""
+        await self.create_round(interaction, category_name, hunt_name)
+
+    @app_commands.command()
+    async def hunt(self, interaction: discord.Interaction, *, hunt_url: str, hunt_name: str):
+        """*Create a new hunt*"""
+        if not (await self.check_is_bot_channel(interaction)):
+            return
+
+        settings = await database.query_hunt_settings_by_name(interaction.guild.id, hunt_name)
+        await settings.update(hunt_url = hunt_url).apply()
+
+        await self.create_round(interaction, hunt_name, hunt_name)
+
+    async def create_round(self, interaction: discord.Interaction, category_name: str, hunt_name: Optional[str]):
+        """ Handle creating a round for either the round or hunt command """
         if not (await self.check_is_bot_channel(interaction)):
             return
 

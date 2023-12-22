@@ -36,11 +36,6 @@ class HuntManagement(SplatStoreCog):
         else:
             await interaction.response.send_message(f":exclamation: Unrecognized setting key: `{setting_key}`. Use `/show_settings` for more info.")
 
-    @app_commands.command()
-    async def hunt(self, interaction: discord.Interaction, hunt_url: str, hunt_name: str):
-        """* Create a new hunt*"""
-        await interaction.response.send_message("Not yet implemented")
-
 async def setup(bot):
     await bot.add_cog(HuntManagement(bot))
 

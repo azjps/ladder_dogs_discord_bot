@@ -1,5 +1,5 @@
 from bot.database import db
-from bot.database.models import HuntSettings
+from bot.database.models.hunt_settings import HuntSettings, HuntNotFoundError
 
 from typing import Optional
 
@@ -52,6 +52,8 @@ class RoundData(db.Model):
             hunt_id = await cls.get_hunt_from_category(from_category)
         else:
             hunt_id = await HuntSettings.get_id_for_name(guild_id, hunt)
+            if hunt_id is None:
+                raise HuntNotFoundError(f"Hunt {hunt} not found in database")
         await round_data.update(
             hunt_id = hunt_id,
             category_id = category,

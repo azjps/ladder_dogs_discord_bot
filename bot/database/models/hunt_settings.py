@@ -25,7 +25,7 @@ class HuntSettings(db.Model):
     @classmethod
     async def get_id_for_name(cls, guild_id: int, name: str):
         hunt = await HuntSettings.query.where(
-            (HuntSettings.name == name) &
+            (HuntSettings.hunt_name == name) &
             (HuntSettings.guild_id == guild_id)
         ).gino.first()
         if hunt is None:
@@ -50,3 +50,5 @@ class HuntSettings(db.Model):
                }}
         """).strip()
 
+class HuntNotFoundError(RuntimeError):
+    pass
