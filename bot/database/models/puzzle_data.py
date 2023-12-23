@@ -28,6 +28,21 @@ class PuzzleData(db.Model):
     delete_request = db.Column(db.DateTime(timezone=True))
     delete_time = db.Column(db.DateTime(timezone=True))
 
+    @classmethod
+    async def get_or_create(cls, guild_id: int, channel_id: int):
+        """query puzzle data, create if it does not exist"""
+        puzzle = await cls.query.where(
+            (cls.guild_id == guild_id) &
+            (cls.channel_id == channel_id)
+        ).gino.first()
+        if puzzle is None:
+            puzzle = await cls.create()
+            await puzzle.update(
+                guild_id=guild_id,
+                channel_id = channel_id
+            ).apply()
+        return puzzle
+
     def is_solved(self):
         return self.status == "solved" and self.solve_time is not None
 

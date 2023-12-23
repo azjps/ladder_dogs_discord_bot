@@ -24,6 +24,17 @@ class RoundData(db.Model):
             ).apply()
         return round_data
 
+    @classmethod
+    async def get_hunt_from_round(cls, guild_id: int, round_channel: int):
+        round_data = await cls.get_or_create(round_channel)
+        hunt = await HuntSettings.get(round_data.hunt_id)
+        if hunt is None:
+            hunt = await HuntSettings.create()
+            # Also update the round
+            await round_data.update(hunt_id = hunt.id).apply()
+        return hunt
+
+
     async def hunt_name(self):
         hunt = await HuntSettings.get(self.hunt_id)
         return hunt.hunt_name

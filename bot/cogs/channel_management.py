@@ -155,9 +155,9 @@ class ChannelManagement(SplatStoreCog):
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
                 hunt_url_base = hunt_settings.hunt_url.rstrip("/")
+                hunt_name = category_name.lower().replace("-", hunt_settings.hunt_url_sep)
                 if channel_name == guild_settings.discussion_channel:
                     # Use the round name in the URL
-                    hunt_name = category_name.lower().replace("-", hunt_settings.hunt_url_sep)
                     hunt_round_base = hunt_url_base
                     if hunt_settings.hunt_round_url:
                         hunt_round_base = hunt_settings.hunt_round_url.rstrip("/")
@@ -165,9 +165,8 @@ class ChannelManagement(SplatStoreCog):
                         hunt_url = f"{hunt_round_base}/{hunt_name}"
                     ).apply()
                 else:
-                    hunt_name = channel_name.replace("-", hunt_settings.hunt_url_sep)
                     await puzzle_data.update(
-                        hunt_url = f"{hunt_round_base}/{hunt_name}"
+                        hunt_url = f"{hunt_url_base}/{hunt_name}"
                     ).apply()
             await text_channel.send(embed=self.build_channel_info_message(guild_settings.discussion_channel, text_channel))
 

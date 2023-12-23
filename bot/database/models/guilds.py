@@ -18,6 +18,14 @@ class GuildSettings(db.Model):
     drive_resources_id = db.Column(db.Text)                         # Document with resources links, etc
     archive_delay = db.Column(db.Integer, default = 300)            # Delay for items to be archived, in seconds
 
+    @classmethod
+    async def get_or_create(cls, guild_id: int):
+        """query guild, create if it does not exist"""
+        guild = await cls.get(guild_id)
+        if guild is None:
+            guild = await cls.create(id=guild_id)
+        return guild
+
     # I don't love managing this way, but I can't find anything in SQLAlchemy about introspecting columns after they're created.
     def column_type(self, column_name):
         if column_name in [

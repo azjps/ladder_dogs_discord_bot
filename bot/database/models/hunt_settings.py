@@ -16,6 +16,21 @@ class HuntSettings(db.Model):
     drive_hunt_folder_id = db.Column(db.Text)                       # The directory for all of this hunt's spreadsheets
     drive_nexus_sheet_id = db.Column(db.Text)                       # Refer to gsheet_nexus.py
 
+    @classmethod
+    async def get_or_create_by_name(cls, guild_id: int, hunt_name: str):
+        """query hunt settings, create if it does not exist"""
+        settings = await cls.query.where(
+            (cls.guild_id == guild_id) &
+            (cls.hunt_name == hunt_name)
+        ).gino.first()
+        if settings is None:
+            settings = await cls.create()
+            await settings.update(
+                guild_id=guild_id,
+                hunt_name = hunt_name
+            ).apply()
+        return settings
+
     # I don't love managing this way, but I can't find anything in SQLAlchemy about introspecting columns after they're created.
     def column_type(self, column_name):
         if column_name in ["guild_id"]:
