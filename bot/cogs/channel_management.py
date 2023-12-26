@@ -103,9 +103,12 @@ class ChannelManagement(SplatStoreCog):
             if new_position < 1:
                 new_position = len(guild.categories)
             category = await guild.create_category(category_name, position=new_position)
+            from_category = 0
+            if interaction.channel.category:
+                from_category = interaction.channel.category.id
             await RoundData.create_round(
                 guild_id = guild.id,
-                from_category = interaction.channel.category.id,
+                from_category = from_category,
                 category = category.id,
                 name = category_name,
                 hunt = hunt_name
