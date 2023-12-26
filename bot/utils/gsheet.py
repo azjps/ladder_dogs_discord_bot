@@ -46,6 +46,37 @@ def spreadsheet_link(sheet_id: str):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}"
 
 
+async def copy_spreadsheet(
+    agcm: gspread_asyncio.AsyncioGspreadClientManager,
+    source_id: str,
+    title: str,
+    folder_id: Optional[str] = None,
+    share_anyone: bool = True,
+) -> gspread_asyncio.AsyncioGspreadSpreadsheet:
+    """Create a new Google Spreadsheet. Wraps
+        :meth:`gspread.Client.copy`.
+
+        :param str source_id: Id of the spreadsheet to copy over.
+        :param str title: Human-readable name of the new spreadsheet.
+        :param bool share_anyone: Anyone with link can edit
+        :rtype: :class:`gspread_asyncio.AsyncioGspreadSpreadsheet`
+        """
+    agc = await agcm.authorize()
+
+    # Re-implmented from gspread_asyncio for folder_id.
+    # NOTE: now merged in https://github.com/dgilman/gspread_asyncio/pull/30
+    ss = await agc.agcm._call(agc.gc.copy, source_id, title, folder_id=folder_id)
+    sheet = gspread_asyncio.AsyncioGspreadSpreadsheet(agc.agcm, ss)
+    agc._ss_cache_title[title] = sheet
+    agc._ss_cache_key[ss.id] = sheet
+
+    if share_anyone:
+        # Allow anyone with the URL to write to this spreadsheet.
+        await agc.insert_permission(sheet.id, None, perm_type="anyone", role="writer")
+
+    logger.info(f"Copied spreadsheet to new URL: {spreadsheet_link(sheet.id)}")
+    return sheet
+
 async def create_spreadsheet(
     agcm: gspread_asyncio.AsyncioGspreadClientManager,
     title: str,

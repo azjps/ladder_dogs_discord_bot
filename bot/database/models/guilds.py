@@ -16,6 +16,7 @@ class GuildSettings(db.Model):
     discord_use_voice_channels = db.Column(db.BIGINT, default = 1)  # Whether to create voice channels for puzzles
     drive_parent_id = db.Column(db.Text)                            # ID of root drive folder
     drive_resources_id = db.Column(db.Text)                         # Document with resources links, etc
+    drive_starter_sheet_id = db.Column(db.Text)                     # Document that is copied to create all puzzle sheets
     archive_delay = db.Column(db.Integer, default = 300)            # Delay for items to be archived, in seconds
 
     @classmethod
@@ -52,6 +53,7 @@ class GuildSettings(db.Model):
                  "discord_use_voice_channels": {self.discord_use_voice_channels},
                  "drive_parent_id": "{self.drive_parent_id}",
                  "drive_resources_id": "{self.drive_resources_id}"
+                 "drive_starter_sheet_id": "{self.drive_starter_sheet_id}"
                  "archive_delay": "{self.archive_delay}"
                }}
         """).strip()

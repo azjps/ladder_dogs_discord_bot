@@ -17,7 +17,7 @@ from bot.splat_store_cog import SplatStoreCog
 from bot.data.puzzle_db import PuzzleDb
 from bot.utils import urls
 from bot.utils.gdrive import get_or_create_folder, rename_file
-from bot.utils.gsheet import create_spreadsheet, get_manager
+from bot.utils.gsheet import copy_spreadsheet, create_spreadsheet, get_manager
 from bot.utils.gsheet_nexus import update_nexus
 from bot import database
 from bot.database.models import GuildSettings, HuntSettings, PuzzleData, RoundData
@@ -58,11 +58,15 @@ class GoogleSheets(SplatStoreCog):
             # create drive folder if needed.  If the round is the same name as the hunt, just keep it at the top level.
             if hunt_settings.hunt_name != puzzle.round_name:
                 round_folder = await get_or_create_folder(
-					name=round_name, parent_id=hunt_settings.drive_hunt_folder_id
-				)
+                    name=round_name, parent_id=hunt_settings.drive_hunt_folder_id
+                )
                 round_folder_id = round_folder["id"]
 
-            spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
+            guild_settings = await database.query_guild(guild_id)
+            if guild_settings.drive_starter_sheet_id:
+                spreadsheet = await copy_spreadsheet(agcm=self.agcm, source_id=guild_settings.drive_starter_sheet_id, title=name, folder_id=round_folder_id)
+            else:
+                spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
             await puzzle.update(
                 google_folder_id = round_folder_id,
                 google_sheet_id = spreadsheet.id
@@ -71,7 +75,6 @@ class GoogleSheets(SplatStoreCog):
             # inform spreadsheet creation
             puzzle_url = puzzle.hunt_url
             sheet_url = urls.spreadsheet_url(spreadsheet.id)
-            guild_settings = await database.query_guild(guild_id)
             emoji = guild_settings.discord_bot_emoji
             embed = discord.Embed(
                 description=
