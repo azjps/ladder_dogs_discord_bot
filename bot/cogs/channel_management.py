@@ -71,7 +71,12 @@ class ChannelManagement(SplatStoreCog):
         settings = await database.query_hunt_settings_by_name(interaction.guild.id, hunt_name)
         await settings.update(hunt_url = hunt_url).apply()
 
-        await self.create_round(interaction, hunt_name, hunt_name)
+        (text_channel, _, _) = await self.create_round(interaction, hunt_name, hunt_name)
+
+        gsheet_cog = self.bot.get_cog("GoogleSheets")
+        if gsheet_cog is not None:
+            # Create the drive folder and nexus sheet for this hunt
+            await gsheet_cog.create_hunt_drive(interaction.guild.id, text_channel, settings)
 
     @app_commands.command()
     async def create_hunt_drive(self, interaction: discord.Interaction):
@@ -81,7 +86,7 @@ class ChannelManagement(SplatStoreCog):
         gsheet_cog = self.bot.get_cog("GoogleSheets")
         await interaction.response.send_message("Creating folder and sheet for this hunt")
         if gsheet_cog is not None:
-            # update google sheet ID
+            # Create the drive folder and nexus sheet for this hunt
             await gsheet_cog.create_hunt_drive(interaction.guild.id, interaction.channel, hunt)
 
     async def create_round(self, interaction: discord.Interaction, category_name: str, hunt_name: Optional[str]):
@@ -107,7 +112,7 @@ class ChannelManagement(SplatStoreCog):
             )
 
         settings = await database.query_guild(interaction.guild.id)
-        await self.create_puzzle_channel(interaction, category.name, settings.discussion_channel)
+        return await self.create_puzzle_channel(interaction, category.name, settings.discussion_channel)
 
     async def get_or_create_channel(
         self, guild, category: discord.CategoryChannel, channel_name: str, channel_type, **kwargs
