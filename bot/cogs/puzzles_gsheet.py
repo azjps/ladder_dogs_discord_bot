@@ -88,6 +88,44 @@ class GoogleSheets(SplatStoreCog):
 
         return spreadsheet
 
+    async def create_hunt_drive(self, guild_id: int, text_channel: discord.TextChannel, hunt: HuntSettings):
+        settings = await database.query_guild(guild_id)
+        if settings.drive_parent_id is None:
+            logger.info(f"Setting 'drive_parent_id' not set for this guild, skipping drive integration for new hunt {hunt.hunt_name}")
+            return
+        folder = await get_or_create_folder(self.cap_name(hunt.hunt_name), settings.drive_parent_id)
+        await hunt.update(drive_hunt_folder_id = folder["id"]).apply()
+        await self.create_hunt_nexus_sheet(guild_id, text_channel, hunt)
+
+    async def create_hunt_nexus_sheet(self, guild_id: int, text_channel: discord.TextChannel, hunt: HuntSettings):
+        if not hunt.drive_hunt_folder_id:
+            return
+
+        if hunt.drive_nexus_sheet_id is not  None:
+            sheet_url = urls.spreadsheet_url(hunt.drive_nexus_sheet_id)
+            await text_channel.send(f":exclamation: Previously created spreadsheet for {hunt.hunt_name}: {sheet_url}")
+            return
+
+        try:
+            spreadsheet = await create_spreadsheet(agcm=self.agcm, title="Nexus", folder_id=hunt.drive_hunt_folder_id)
+            await hunt.update(drive_nexus_sheet_id = spreadsheet.id).apply()
+
+            # inform spreadsheet creation
+            sheet_url = urls.spreadsheet_url(spreadsheet.id)
+            guild_settings = await database.query_guild(guild_id)
+            emoji = guild_settings.discord_bot_emoji
+            embed = discord.Embed(
+                description=
+                f"{emoji} I've created a drive nexus spreadsheet for you at {sheet_url}. "
+            )
+            await text_channel.send(embed=embed)
+        except Exception as exc:
+            logger.exception(f"Unable to create nexus spreadsheet for {hunt.hunt_name}")
+            await text_channel.send(f":exclamation: Unable to create nexus spreadsheet for {hunt.hunt_name}: {exc}")
+            return
+
+        return spreadsheet
+
     def update_cell_row(self, cell_range, row: int, key: str, value: str):
         """Update key-value row cell contents; row starts from 1"""
         cell_range[(row - 1) * 2].value = key

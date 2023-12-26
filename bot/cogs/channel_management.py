@@ -7,10 +7,10 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import pytz
 
-from bot.splat_store_cog import SplatStoreCog
+from bot.splat_store_cog import SplatStoreCog, GeneralAppError
 from bot.data.puzzle_db import PuzzleDb
 from bot import database
-from bot.database.models import PuzzleData, RoundData
+from bot.database.models import PuzzleData, RoundData, HuntSettings
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,17 @@ class ChannelManagement(SplatStoreCog):
         await settings.update(hunt_url = hunt_url).apply()
 
         await self.create_round(interaction, hunt_name, hunt_name)
+
+    @app_commands.command()
+    async def create_hunt_drive(self, interaction: discord.Interaction):
+        hunt = await database.query_hunt_settings_by_round(interaction.guild.id, interaction.channel.category.id)
+        if hunt.hunt_name is None:
+            raise GeneralAppError(f"Channel {interaction.channel.category.name}/{interaction.channel.name} does not appear to be a part of a hunt")
+        gsheet_cog = self.bot.get_cog("GoogleSheets")
+        await interaction.response.send_message("Creating folder and sheet for this hunt")
+        if gsheet_cog is not None:
+            # update google sheet ID
+            await gsheet_cog.create_hunt_drive(interaction.guild.id, interaction.channel, hunt)
 
     async def create_round(self, interaction: discord.Interaction, category_name: str, hunt_name: Optional[str]):
         """ Handle creating a round for either the round or hunt command """
