@@ -132,7 +132,7 @@ class GoogleSheets(SplatStoreCog):
         for hunt in hunts:
             if hunt.drive_nexus_sheet_id:
                 # TODO: Only get puzzles applicable for this hunt
-                puzzles = await PuzzleDb.get_all(guild.id)
+                puzzles = await PuzzleDb.get_all(hunt.guild_id)
                 await update_nexus(agcm=self.agcm, file_id=hunt.drive_nexus_sheet_id, puzzles=puzzles)
 
     @refresh_nexus.before_loop
