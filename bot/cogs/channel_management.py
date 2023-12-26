@@ -181,7 +181,11 @@ class ChannelManagement(SplatStoreCog):
                     ).apply()
             await text_channel.send(embed=self.build_channel_info_message(guild_settings.discussion_channel, text_channel))
 
-            if channel_name != guild_settings.discussion_channel or channel_name == "meta":
+            if channel_name == guild_settings.discussion_channel and channel_name != "meta":
+                await puzzle_data.update(
+                    puzzle_type = "discussion"
+                ).apply()
+            else:
                 gsheet_cog = self.bot.get_cog("GoogleSheets")
                 if gsheet_cog is not None:
                     # update google sheet ID

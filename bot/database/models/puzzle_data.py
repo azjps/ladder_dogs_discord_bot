@@ -42,6 +42,13 @@ class PuzzleData(db.Model):
                 channel_id = channel_id
             ).apply()
         return puzzle
+    
+    @classmethod
+    async def puzzles_in_round(cls, round_id: int):
+        puzzles = await cls.query.where(
+            (cls.round_id == round_id)
+        ).gino.all()
+        return puzzles
 
     def is_solved(self):
         return self.status == "solved" and self.solve_time is not None

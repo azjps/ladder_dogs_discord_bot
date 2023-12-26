@@ -27,11 +27,10 @@ COLUMNS = [
     "notes",
     "start_time",
     "solve_time",
-    "data_path",
 ]
 
 
-async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_id: str, puzzles: List[PuzzleData]):
+async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_id: str, puzzles: List[PuzzleData], hunt_name: str, round_name: str):
     # Always authorize first.
     # If you have a long-running program call authorize() repeatedly.
     agc = await agcm.authorize()
@@ -44,20 +43,20 @@ async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_i
     # Update puzzle contents
     cell_range = await zero_ws.range(HEADER_ROW, 1, HEADER_ROW + len(puzzles), len(COLUMNS))
     cell_index = 0
+    update_count = 0;
     for column in COLUMNS:
         cell_range[cell_index].value = string.capwords(column.replace("_", " "))
         cell_index += 1
     for puzzle in puzzles:
+        if puzzle.puzzle_type == "discussion":
+            continue
+        update_count = update_count + 1
         for column in COLUMNS:
             if column == "google_sheet_url" and puzzle.google_sheet_id:
                 cell_range[cell_index].value = urls.spreadsheet_url(puzzle.google_sheet_id)
-            elif column == "data_path":
-                # Convenience for bot administrator to get path to puzzle metadata json
-                cell_range[cell_index].value = f"{puzzle.guild_id}/{puzzle.round_id}/{puzzle.channel_id}.json"
             else:
                 cell_range[cell_index].value = str(getattr(puzzle, column, ""))
             cell_index += 1
-    assert cell_index == len(cell_range)
     await zero_ws.update_cells(cell_range)
-    logger.info(f"Finished updating nexus spreadsheet with {len(puzzles)} puzzles")
+    logger.info(f"Finished updating {hunt_name}/{round_name} nexus spreadsheet with {update_count} puzzles")
 

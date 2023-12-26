@@ -20,7 +20,7 @@ from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
 from bot.utils.gsheet_nexus import update_nexus
 from bot import database
-from bot.database.models import GuildSettings, HuntSettings, PuzzleData
+from bot.database.models import GuildSettings, HuntSettings, PuzzleData, RoundData
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +52,15 @@ class GoogleSheets(SplatStoreCog):
             return
 
         try:
-            # create drive folder if needed
-            round_folder = await get_or_create_folder(
-                name=round_name, parent_id=hunt_settings.drive_hunt_folder_id
-            )
-            round_folder_id = round_folder["id"]
+            # default to storing everything in with the hunt
+            round_folder_id = hunt_settings.drive_hunt_folder_id
+
+            # create drive folder if needed.  If the round is the same name as the hunt, just keep it at the top level.
+            if hunt_settings.hunt_name != puzzle.round_name:
+                round_folder = await get_or_create_folder(
+					name=round_name, parent_id=hunt_settings.drive_hunt_folder_id
+				)
+                round_folder_id = round_folder["id"]
 
             spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
             await puzzle.update(
@@ -169,9 +173,15 @@ class GoogleSheets(SplatStoreCog):
         hunts = await HuntSettings.query.gino.all()
         for hunt in hunts:
             if hunt.drive_nexus_sheet_id:
-                # TODO: Only get puzzles applicable for this hunt
-                puzzles = await PuzzleDb.get_all(hunt.guild_id)
-                await update_nexus(agcm=self.agcm, file_id=hunt.drive_nexus_sheet_id, puzzles=puzzles)
+                rounds = await RoundData.rounds_in_hunt(hunt)
+                for round_data in rounds:
+                    puzzles = await PuzzleData.puzzles_in_round(round_data.category_id)
+                    await update_nexus(agcm=self.agcm,
+                        file_id=hunt.drive_nexus_sheet_id,
+                        puzzles=puzzles,
+                        hunt_name=hunt.hunt_name,
+                        round_name=round_data.name
+                    )
 
     @refresh_nexus.before_loop
     async def before_refreshing_nexus(self):

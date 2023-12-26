@@ -34,6 +34,12 @@ class RoundData(db.Model):
             await round_data.update(hunt_id = hunt.id).apply()
         return hunt
 
+    @classmethod
+    async def rounds_in_hunt(cls, hunt: HuntSettings):
+        rounds = await cls.query.where(
+            (cls.hunt_id == hunt.id)
+        ).gino.all()
+        return rounds
 
     async def hunt_name(self):
         hunt = await HuntSettings.get(self.hunt_id)
