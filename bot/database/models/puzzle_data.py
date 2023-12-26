@@ -46,7 +46,8 @@ class PuzzleData(db.Model):
     @classmethod
     async def puzzles_in_round(cls, round_id: int):
         puzzles = await cls.query.where(
-            (cls.round_id == round_id)
+            (cls.round_id == round_id) &
+            (cls.delete_time == None)
         ).gino.all()
         return puzzles
 
