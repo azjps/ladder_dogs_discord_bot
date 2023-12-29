@@ -34,28 +34,29 @@ class ChannelManagement(SplatStoreCog):
         return "-".join(name.lower().split())
 
     @app_commands.command()
-    async def puzzle(self, interaction: discord.Interaction, *, hunt_round: Optional[str], puzzle: str):
+    async def puzzle(self, interaction: discord.Interaction, *, hunt_round: Optional[str], puzzle: str, url: Optional[str]):
         """*Create new puzzle channels: /puzzle round-name: puzzle-name*
 
         Can be posted in either a #general channel or the bot channel
         """
         guild = interaction.guild
         settings = await database.query_guild(interaction.guild.id)
-        if (interaction.channel.name == settings.discussion_channel) and (interaction.channel.category.name != "Text Channels"):
+        if not hunt_round:
             category = interaction.channel.category
-            if hunt_round is None:
-                hunt_round = category.name
-            if hunt_round != category.name:
-                raise ValueError(f"Unexpected round: {hunt_round}, expected: {category.name}")
-            return await self.create_puzzle_channel(interaction, hunt_round, puzzle)
+            if category and category.name != "Text Channels":
+                if hunt_round is None:
+                    hunt_round = category.name
+                if hunt_round != category.name:
+                    raise ValueError(f"Unexpected round: {hunt_round}, expected: {category.name}")
+                return await self.create_puzzle_channel(interaction, hunt_round, puzzle, url)
 
         if not (await self.check_is_bot_channel(interaction)):
             return
 
         if hunt_round is None:
-            raise ValueError(f"Unable to parse puzzle name {arg}, try using `/puzzle round-name puzzle-name`")
+            raise ValueError(f"Unable to parse hunt for puzzle name {puzzle}, try using `/puzzle round-name puzzle-name`")
 
-        return await self.create_puzzle_channel(interaction, hunt_round, puzzle)
+        return await self.create_puzzle_channel(interaction, hunt_round, puzzle, url)
 
     @app_commands.command()
     async def round(self, interaction: discord.Interaction, *, category_name: str, hunt_name: Optional[str]):
@@ -115,7 +116,7 @@ class ChannelManagement(SplatStoreCog):
             )
 
         settings = await database.query_guild(interaction.guild.id)
-        return await self.create_puzzle_channel(interaction, category.name, settings.discussion_channel)
+        return await self.create_puzzle_channel(interaction, category.name, settings.discussion_channel, None)
 
     async def get_or_create_channel(
         self, guild, category: discord.CategoryChannel, channel_name: str, channel_type, **kwargs
@@ -141,12 +142,16 @@ class ChannelManagement(SplatStoreCog):
 
         return (channel, created)
 
-    async def create_puzzle_channel(self, interaction, round_name: str, puzzle_name: str):
+    async def create_puzzle_channel(self, interaction, round_name: str, puzzle_name: str, url: Optional[str]):
         """Create new text channel for puzzle, and optionally a voice channel
 
         Save puzzle metadata to data_dir, send initial messages to channel, and
         create corresponding Google Sheet if GoogleSheets cog is set up.
         """
+        await interaction.response.send_message(
+            f"Creating channel(s) for puzzle {puzzle_name}",
+            ephemeral=True
+        )
         guild = interaction.guild
         category_name = round_name
         category = discord.utils.get(guild.categories, name=category_name)
@@ -160,16 +165,7 @@ class ChannelManagement(SplatStoreCog):
         guild_settings = await database.query_guild(guild.id)
         hunt_settings = await database.query_hunt_settings_by_round(guild.id, category.id)
         if created_text:
-            puzzle_data = await database.query_puzzle_data(guild_id = interaction.guild.id, channel_id = text_channel.id)
-            await puzzle_data.update(
-                name=channel_name,
-                round_name=category_name,
-                round_id=category.id,
-                guild_name=guild.name,
-                channel_mention=text_channel.mention,
-                start_time=datetime.datetime.now(tz=pytz.UTC)
-            ).apply()
-            if hunt_settings.hunt_url:
+            if not url and hunt_settings.hunt_url:
                 # NOTE: this is a heuristic and may need to be updated!
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
@@ -180,13 +176,19 @@ class ChannelManagement(SplatStoreCog):
                     hunt_round_base = hunt_url_base
                     if hunt_settings.hunt_round_url:
                         hunt_round_base = hunt_settings.hunt_round_url.rstrip("/")
-                    await puzzle_data.update(
-                        hunt_url = f"{hunt_round_base}/{hunt_name}"
-                    ).apply()
+                    url = f"{hunt_round_base}/{hunt_name}"
                 else:
-                    await puzzle_data.update(
-                        hunt_url = f"{hunt_url_base}/{hunt_name}"
-                    ).apply()
+                    url = f"{hunt_url_base}/{hunt_name}"
+            puzzle_data = await database.query_puzzle_data(guild_id = interaction.guild.id, channel_id = text_channel.id)
+            await puzzle_data.update(
+                name=channel_name,
+                round_name=category_name,
+                round_id=category.id,
+                guild_name=guild.name,
+                channel_mention=text_channel.mention,
+                hunt_url = url,
+                start_time=datetime.datetime.now(tz=pytz.UTC)
+            ).apply()
             await text_channel.send(embed=self.build_channel_info_message(guild_settings.discussion_channel, text_channel))
 
             if channel_name == guild_settings.discussion_channel and channel_name != "meta":
@@ -220,11 +222,11 @@ class ChannelManagement(SplatStoreCog):
             elif created_voice:
                 created_desc = "voice"
 
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f":white_check_mark: I've created new puzzle {created_desc} channels for {category.mention}: {text_channel.mention}"
             )
         else:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"I've found an already existing puzzle channel for {category.mention}: {text_channel.mention}"
             )
         return (text_channel, voice_channel, created)
