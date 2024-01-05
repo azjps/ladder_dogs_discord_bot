@@ -7,14 +7,14 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import pytz
 
-from bot.splat_store_cog import SplatStoreCog, GeneralAppError
+from bot.splat_store_cog import BaseCog, GeneralAppError
 from bot.data.puzzle_db import PuzzleDb
 from bot import database
 from bot.database.models import PuzzleData, RoundData, HuntSettings
 
 logger = logging.getLogger(__name__)
 
-class ChannelManagement(SplatStoreCog):
+class ChannelManagement(BaseCog):
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
     SOLVED_PUZZLES_CATEGORY_PREFIX = "SOLVED-"

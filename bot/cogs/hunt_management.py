@@ -4,13 +4,13 @@ import discord
 from discord import app_commands
 from discord.ext import commands 
 
-from bot.splat_store_cog import SplatStoreCog
+from bot.splat_store_cog import BaseCog
 from bot import database
 from bot.database.models import HuntSettings 
 
 logger = logging.getLogger(__name__)
 
-class HuntManagement(SplatStoreCog):
+class HuntManagement(BaseCog):
 
     def __init__(self, bot):
         self.bot = bot

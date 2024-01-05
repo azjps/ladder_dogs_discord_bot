@@ -8,7 +8,7 @@ class HuntSettings(db.Model):
     __tablename__ = "hunt_settings"
 
     id = db.Column(db.BIGINT, primary_key=True, autoincrement=True)
-    guild_id = db.Column(db.BIGINT)
+    guild_id = db.Column(db.BIGINT, db.ForeignKey("guilds.id", onupdate="CASCADE"))
     hunt_name = db.Column(db.Text)
     hunt_url = db.Column(db.Text)
     hunt_url_sep = db.Column(db.Text, default = "_")                # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar

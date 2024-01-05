@@ -13,7 +13,7 @@ from discord.ext import tasks
 import gspread_asyncio
 import gspread_formatting
 
-from bot.splat_store_cog import SplatStoreCog
+from bot.splat_store_cog import BaseCog
 from bot.data.puzzle_db import PuzzleDb
 from bot.utils import urls
 from bot.utils.gdrive import get_or_create_folder, rename_file
@@ -25,7 +25,7 @@ from bot.database.models import GuildSettings, HuntSettings, PuzzleData, RoundDa
 logger = logging.getLogger(__name__)
 
 
-class GoogleSheets(SplatStoreCog):
+class GoogleSheets(BaseCog):
     agcm = get_manager()
 
     def __init__(self, bot):

@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 import pytz
 
-from bot.splat_store_cog import SplatStoreCog, GeneralAppError
+from bot.splat_store_cog import BaseCog, GeneralAppError
 from bot.data.puzzle_db import PuzzleDb
 from bot.utils import urls
 from bot import database
@@ -14,7 +14,7 @@ from bot.database.models import PuzzleData
 
 logger = logging.getLogger(__name__)
 
-class PuzzleManagement(SplatStoreCog):
+class PuzzleManagement(BaseCog):
     PRIORITIES = ["low", "medium", "high", "very high"]
 
     def __init__(self, bot):

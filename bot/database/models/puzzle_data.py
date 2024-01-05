@@ -6,11 +6,15 @@ class PuzzleData(db.Model):
 
     id = db.Column(db.BIGINT, primary_key=True, autoincrement=True)
     name = db.Column(db.Text)
+    round_id = db.Column(db.BIGINT, db.ForeignKey("round_data.id"), default=0)
+
+    ### These should just be pulled from relationship to round:
     round_name = db.Column(db.Text)
-    round_id = db.Column(db.BIGINT, default=0) # round = category channel
     solved_round_id = db.Column(db.BIGINT, default=0)
     guild_id = db.Column(db.BIGINT, default=0)
     guild_name = db.Column(db.Text)
+    ###
+
     channel_id = db.Column(db.BIGINT, default=0)
     channel_mention = db.Column(db.Text)
     voice_channel_id = db.Column(db.BIGINT, default=0)
@@ -27,6 +31,10 @@ class PuzzleData(db.Model):
     archive_time = db.Column(db.DateTime(timezone=True))
     delete_request = db.Column(db.DateTime(timezone=True))
     delete_time = db.Column(db.DateTime(timezone=True))
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._round = None
 
     @classmethod
     async def get_or_create(cls, guild_id: int, channel_id: int):

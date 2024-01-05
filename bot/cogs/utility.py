@@ -8,13 +8,13 @@ from typing import Optional
 import discord
 from discord import app_commands
 
-from bot.splat_store_cog import SplatStoreCog, GeneralAppError
+from bot.splat_store_cog import BaseCog, GeneralAppError
 
 PY_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
 
 logger = logging.getLogger(__name__)
 
-class Utility(SplatStoreCog):
+class Utility(BaseCog):
     def __init__(self, bot):
         self.bot = bot
         self.start_time = datetime.now().replace(microsecond=0)

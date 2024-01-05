@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 """
 Base cog class which holds some common code for all of the cogs in this application.
 """
-class SplatStoreCog(commands.Cog):
+class BaseCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot

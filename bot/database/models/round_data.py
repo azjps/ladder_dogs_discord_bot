@@ -8,10 +8,12 @@ class RoundData(db.Model):
     __tablename__ = "round_data"
 
     id = db.Column(db.BIGINT, primary_key=True, autoincrement=True)
+    hunt_id = db.Column(db.BIGINT, db.ForeignKey("hunt_settings.id", onupdate="CASCADE", ondelete="CASCADE"), default=0)
     name = db.Column(db.Text)
-    category_id = db.Column(db.BIGINT, default=0)
+    category_id = db.Column(db.BIGINT, default=0)  # discord assigned id
     solved_category_id = db.Column(db.BIGINT, default=0)
-    hunt_id = db.Column(db.BIGINT, default=0)
+    round_url = db.Column(db.Text)  # if there is a separate url scheme for round
+    round_url_sep = db.Column(db.Text)  # if there is a different separater for round
  
     @classmethod
     async def get_or_create(cls, category: int):
