@@ -12,7 +12,7 @@ naming_convention = {
 db = Gino(naming_convention=naming_convention)
 
 # import models so Gino can register them
-import bot.database.models  # noqa
+import bot.database.models as models  # noqa
 
 
 async def setup():

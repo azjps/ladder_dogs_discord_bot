@@ -14,7 +14,7 @@ class RoundData(db.Model):
     solved_category_id = db.Column(db.BIGINT, default=0)
     round_url = db.Column(db.Text)  # if there is a separate url scheme for round
     round_url_sep = db.Column(db.Text)  # if there is a different separater for round
- 
+
     @classmethod
     async def get_or_create(cls, category: int):
         """query round data, create if it does not exist"""

@@ -6,7 +6,13 @@ class PuzzleData(db.Model):
 
     id = db.Column(db.BIGINT, primary_key=True, autoincrement=True)
     name = db.Column(db.Text)
-    round_id = db.Column(db.BIGINT, db.ForeignKey("round_data.id"), default=0)
+
+    # NOTE: round_id is being set to the discord category UID, and not
+    # the PK of the round_data table.
+    round_id = db.Column(db.BIGINT,
+                         db.ForeignKey("round_data.category_id",
+                                       onupdate="CASCADE", ondelete="CASCADE"),
+                         default=0)
 
     ### These should just be pulled from relationship to round:
     round_name = db.Column(db.Text)
@@ -35,6 +41,7 @@ class PuzzleData(db.Model):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._round = None
+        self._notes = None
 
     @classmethod
     async def get_or_create(cls, guild_id: int, channel_id: int):
@@ -62,3 +69,13 @@ class PuzzleData(db.Model):
     def is_solved(self):
         return self.status == "solved" and self.solve_time is not None
 
+
+class PuzzleNotes(db.Model):
+    __tablename__ = "puzzle_notes"
+
+    note_id = db.Column(db.BIGINT, primary_key=True, autoincrement=True)
+    puzzle_id = db.Column(db.BIGINT,
+                         db.ForeignKey("puzzle_data.id",
+                                       onupdate="CASCADE", ondelete="CASCADE"))
+    text = db.Column(db.Text)
+    added_time = db.Column(db.DateTime(timezone=True))
