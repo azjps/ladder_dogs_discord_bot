@@ -2,15 +2,15 @@ import logging
 
 import discord
 from discord import app_commands
-from discord.ext import commands 
+from discord.ext import commands
 
 from bot.base_cog import BaseCog
 from bot import database
 
 logger = logging.getLogger(__name__)
 
-class HuntManagement(BaseCog):
 
+class HuntManagement(BaseCog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -19,22 +19,32 @@ class HuntManagement(BaseCog):
     async def show_hunt_settings(self, interaction: discord.Interaction):
         """*(admin) Show guild-level settings*"""
         guild_id = interaction.guild.id
-        settings = await database.query_hunt_settings_by_round(guild_id, interaction.channel.category.id)
+        settings = await database.query_hunt_settings_by_round(
+            guild_id, interaction.channel.category.id
+        )
         await interaction.response.send_message(f"```json\n{settings.to_json()}```")
 
     @commands.has_permissions(manage_channels=True)
     @app_commands.command()
-    async def update_hunt_setting(self, interaction: discord.Interaction, setting_key: str, setting_value: str):
+    async def update_hunt_setting(
+        self, interaction: discord.Interaction, setting_key: str, setting_value: str
+    ):
         """*(admin) Update guild setting: /update_setting key value*"""
         guild_id = interaction.guild.id
-        settings = await database.query_hunt_settings_by_round(guild_id, interaction.channel.category.id)
+        settings = await database.query_hunt_settings_by_round(
+            guild_id, interaction.channel.category.id
+        )
         if hasattr(settings, setting_key):
             old_value = getattr(settings, setting_key)
             await settings.set({setting_key: setting_value})
-            await interaction.response.send_message(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}`")
+            await interaction.response.send_message(
+                f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}`"
+            )
         else:
-            await interaction.response.send_message(f":exclamation: Unrecognized setting key: `{setting_key}`. Use `/show_settings` for more info.")
+            await interaction.response.send_message(
+                f":exclamation: Unrecognized setting key: `{setting_key}`. Use `/show_settings` for more info."
+            )
+
 
 async def setup(bot):
     await bot.add_cog(HuntManagement(bot))
-

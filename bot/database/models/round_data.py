@@ -8,7 +8,11 @@ class RoundData(db.Model):
     __tablename__ = "round_data"
 
     id = db.Column(db.BIGINT, primary_key=True, autoincrement=True)
-    hunt_id = db.Column(db.BIGINT, db.ForeignKey("hunt_settings.id", onupdate="CASCADE", ondelete="CASCADE"), default=0)
+    hunt_id = db.Column(
+        db.BIGINT,
+        db.ForeignKey("hunt_settings.id", onupdate="CASCADE", ondelete="CASCADE"),
+        default=0,
+    )
     name = db.Column(db.Text)
     category_id = db.Column(db.BIGINT, nullable=True, unique=True)  # discord assigned id
     solved_category_id = db.Column(db.BIGINT, default=0)
@@ -30,14 +34,12 @@ class RoundData(db.Model):
         if hunt is None:
             hunt = await HuntSettings.create()
             # Also update the round
-            await round_data.update(hunt_id = hunt.id).apply()
+            await round_data.update(hunt_id=hunt.id).apply()
         return hunt
 
     @classmethod
     async def rounds_in_hunt(cls, hunt: HuntSettings):
-        rounds = await cls.query.where(
-            (cls.hunt_id == hunt.id)
-        ).gino.all()
+        rounds = await cls.query.where((cls.hunt_id == hunt.id)).gino.all()
         return rounds
 
     async def hunt_name(self):
@@ -47,8 +49,7 @@ class RoundData(db.Model):
     @classmethod
     async def query_by_category(cls, category: int):
         round_data = await RoundData.query.where(
-            (RoundData.category_id == category) |
-            (RoundData.solved_category_id == category)
+            (RoundData.category_id == category) | (RoundData.solved_category_id == category)
         ).gino.first()
         return round_data
 
@@ -61,7 +62,14 @@ class RoundData(db.Model):
         return hunt.id
 
     @classmethod
-    async def create_round(cls, guild_id: int, from_category: int, category: int, name: Optional[str], hunt: Optional[str]):
+    async def create_round(
+        cls,
+        guild_id: int,
+        from_category: int,
+        category: int,
+        name: Optional[str],
+        hunt: Optional[str],
+    ):
         hunt_id = 0
         if hunt is None:
             hunt_id = await cls.get_hunt_from_category(guild_id, from_category)
@@ -71,7 +79,6 @@ class RoundData(db.Model):
                 raise HuntNotFoundError(f"Hunt {hunt} not found in database")
         return await cls.get_or_create(
             category=category,
-            hunt_id = hunt_id,
-            name = name,
+            hunt_id=hunt_id,
+            name=name,
         )
-

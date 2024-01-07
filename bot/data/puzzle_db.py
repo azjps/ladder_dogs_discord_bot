@@ -9,31 +9,29 @@ from bot.database.models import PuzzleData
 
 logger = logging.getLogger(__name__)
 
+
 class MissingPuzzleError(RuntimeError):
     pass
 
-class PuzzleDb:
 
+class PuzzleDb:
     @classmethod
     async def delete(cls, puzzle_data):
         await puzzle_data.update(
-            status = "deleted",
-            delete_time = datetime.datetime.now(tz=pytz.UTC)
+            status="deleted", delete_time=datetime.datetime.now(tz=pytz.UTC)
         ).apply()
 
     @classmethod
     async def request_delete(cls, puzzle_data):
         await puzzle_data.update(
-            status = "deleting",
-            delete_request = datetime.datetime.now(tz=pytz.UTC)
+            status="deleting", delete_request=datetime.datetime.now(tz=pytz.UTC)
         ).apply()
 
     @classmethod
     async def get(cls, guild_id, puzzle_id) -> PuzzleData:
         puzzle = await PuzzleData.query.where(
-            (PuzzleData.guild_id == guild_id) &
-			(PuzzleData.channel_id == puzzle_id)
-		).gino.first()
+            (PuzzleData.guild_id == guild_id) & (PuzzleData.channel_id == puzzle_id)
+        ).gino.first()
         if puzzle is None:
             raise MissingPuzzleError(f"Unable to find puzzle {puzzle_id} for guild {guild_id}")
         return puzzle
@@ -41,13 +39,14 @@ class PuzzleDb:
     @classmethod
     async def get_all(cls, guild_id) -> List[PuzzleData]:
         puzzle_datas = await PuzzleData.query.where(
-            (PuzzleData.guild_id == guild_id) &
-            (PuzzleData.delete_time == None)
-		).gino.all()
+            (PuzzleData.guild_id == guild_id) & (PuzzleData.delete_time == None)
+        ).gino.all()
         return cls.sort_by_round_start(puzzle_datas)
 
     @classmethod
-    async def get_solved_puzzles_to_archive(cls, guild_id, now=None, include_general: bool = False) -> List[PuzzleData]:
+    async def get_solved_puzzles_to_archive(
+        cls, guild_id, now=None, include_general: bool = False
+    ) -> List[PuzzleData]:
         """Returns list of all solved but unarchived puzzles"""
         all_puzzles = await cls.get_all(guild_id)
         now = now or datetime.datetime.now(tz=pytz.UTC)
@@ -69,7 +68,9 @@ class PuzzleDb:
         return puzzles_to_archive
 
     @classmethod
-    async def get_puzzles_to_delete(cls, guild_id: int, include_general: bool = False, minutes: int = 5) -> List[PuzzleData]:
+    async def get_puzzles_to_delete(
+        cls, guild_id: int, include_general: bool = False, minutes: int = 5
+    ) -> List[PuzzleData]:
         """Return list of puzzles to delete"""
         all_puzzles = await cls.get_all(guild_id)
         now = datetime.datetime.now(tz=pytz.UTC)
@@ -109,5 +110,6 @@ class PuzzleDb:
             if round_start_time is None or start_time < round_start_time:
                 round_start_times[puzzle.round_name] = start_time
 
-        return sorted(puzzles, key=lambda p: (round_start_times.get(p.round_name, 0), p.start_time or 0))
-
+        return sorted(
+            puzzles, key=lambda p: (round_start_times.get(p.round_name, 0), p.start_time or 0)
+        )

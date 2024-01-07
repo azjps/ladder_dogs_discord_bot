@@ -11,18 +11,21 @@ class HuntSettings(db.Model):
     guild_id = db.Column(db.BIGINT, db.ForeignKey("guilds.id", onupdate="CASCADE"))
     hunt_name = db.Column(db.Text)
     hunt_url = db.Column(db.Text)
-    hunt_url_sep = db.Column(db.Text, default = "_")                # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar
-    hunt_round_url = db.Column(db.Text)                             # If specified, a different url to use for rounds, defaults to hunt_url
-    drive_hunt_folder_id = db.Column(db.Text)                       # The directory for all of this hunt's spreadsheets
-    drive_nexus_sheet_id = db.Column(db.Text)                       # Refer to gsheet_nexus.py
+    hunt_url_sep = db.Column(
+        db.Text, default="_"
+    )  # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar
+    hunt_round_url = db.Column(
+        db.Text
+    )  # If specified, a different url to use for rounds, defaults to hunt_url
+    drive_hunt_folder_id = db.Column(db.Text)  # The directory for all of this hunt's spreadsheets
+    drive_nexus_sheet_id = db.Column(db.Text)  # Refer to gsheet_nexus.py
     # drive_resources_id = db.Column(db.Text)                         # Document with resources links, etc
 
     @classmethod
     async def get_or_create_by_name(cls, guild_id: int, hunt_name: str):
         """query hunt settings, create if it does not exist"""
         settings = await cls.query.where(
-            (cls.guild_id == guild_id) &
-            (cls.hunt_name == hunt_name)
+            (cls.guild_id == guild_id) & (cls.hunt_name == hunt_name)
         ).gino.first()
         if settings is None:
             settings = await cls.create(
@@ -40,8 +43,7 @@ class HuntSettings(db.Model):
     @classmethod
     async def get_id_for_name(cls, guild_id: int, name: str):
         hunt = await HuntSettings.query.where(
-            (HuntSettings.hunt_name == name) &
-            (HuntSettings.guild_id == guild_id)
+            (HuntSettings.hunt_name == name) & (HuntSettings.guild_id == guild_id)
         ).gino.first()
         if hunt is None:
             return None
@@ -55,14 +57,22 @@ class HuntSettings(db.Model):
 
     def to_json(self):
         return json.dumps(
-            {k: getattr(self, k) for k in 
-             ("guild_id", "hunt_name", "hunt_url", "hunt_url_sep",
-              "hunt_round_url", "drive_hunt_folder_id", 
-              "drive_nexus_sheet_id",
-              # "drive_resources_id",
-              )},
+            {
+                k: getattr(self, k)
+                for k in (
+                    "guild_id",
+                    "hunt_name",
+                    "hunt_url",
+                    "hunt_url_sep",
+                    "hunt_round_url",
+                    "drive_hunt_folder_id",
+                    "drive_nexus_sheet_id",
+                    # "drive_resources_id",
+                )
+            },
             indent=4,
         )
+
 
 class HuntNotFoundError(RuntimeError):
     pass

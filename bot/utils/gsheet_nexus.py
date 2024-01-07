@@ -30,7 +30,13 @@ COLUMNS = [
 ]
 
 
-async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_id: str, puzzles: List[PuzzleData], hunt_name: str, round_name: str):
+async def update_nexus(
+    agcm: gspread_asyncio.AsyncioGspreadClientManager,
+    file_id: str,
+    puzzles: List[PuzzleData],
+    hunt_name: str,
+    round_name: str,
+):
     # Always authorize first.
     # If you have a long-running program call authorize() repeatedly.
     agc = await agcm.authorize()
@@ -58,5 +64,6 @@ async def update_nexus(agcm: gspread_asyncio.AsyncioGspreadClientManager, file_i
                 cell_range[cell_index].value = str(getattr(puzzle, column, ""))
             cell_index += 1
     await zero_ws.update_cells(cell_range)
-    logger.info(f"Finished updating {hunt_name}/{round_name} nexus spreadsheet with {update_count} puzzles")
-
+    logger.info(
+        f"Finished updating {hunt_name}/{round_name} nexus spreadsheet with {update_count} puzzles"
+    )

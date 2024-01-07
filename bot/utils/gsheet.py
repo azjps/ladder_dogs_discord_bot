@@ -8,6 +8,7 @@ import logging
 
 # asyncio imports
 import gspread_asyncio
+
 # from google-auth package
 from google.oauth2.service_account import Credentials
 
@@ -54,13 +55,13 @@ async def copy_spreadsheet(
     share_anyone: bool = True,
 ) -> gspread_asyncio.AsyncioGspreadSpreadsheet:
     """Create a new Google Spreadsheet. Wraps
-        :meth:`gspread.Client.copy`.
+    :meth:`gspread.Client.copy`.
 
-        :param str source_id: Id of the spreadsheet to copy over.
-        :param str title: Human-readable name of the new spreadsheet.
-        :param bool share_anyone: Anyone with link can edit
-        :rtype: :class:`gspread_asyncio.AsyncioGspreadSpreadsheet`
-        """
+    :param str source_id: Id of the spreadsheet to copy over.
+    :param str title: Human-readable name of the new spreadsheet.
+    :param bool share_anyone: Anyone with link can edit
+    :rtype: :class:`gspread_asyncio.AsyncioGspreadSpreadsheet`
+    """
     agc = await agcm.authorize()
 
     # Re-implmented from gspread_asyncio for folder_id.
@@ -77,6 +78,7 @@ async def copy_spreadsheet(
     logger.info(f"Copied spreadsheet to new URL: {spreadsheet_link(sheet.id)}")
     return sheet
 
+
 async def create_spreadsheet(
     agcm: gspread_asyncio.AsyncioGspreadClientManager,
     title: str,
@@ -84,12 +86,12 @@ async def create_spreadsheet(
     share_anyone: bool = True,
 ) -> gspread_asyncio.AsyncioGspreadSpreadsheet:
     """Create a new Google Spreadsheet. Wraps
-        :meth:`gspread.Client.create`.
+    :meth:`gspread.Client.create`.
 
-        :param str title: Human-readable name of the new spreadsheet.
-        :param bool share_anyone: Anyone with link can edit
-        :rtype: :class:`gspread_asyncio.AsyncioGspreadSpreadsheet`
-        """
+    :param str title: Human-readable name of the new spreadsheet.
+    :param bool share_anyone: Anyone with link can edit
+    :rtype: :class:`gspread_asyncio.AsyncioGspreadSpreadsheet`
+    """
     agc = await agcm.authorize()
 
     # Re-implmented from gspread_asyncio for folder_id.
@@ -160,7 +162,10 @@ def open_google_spreadsheet(spreadsheet_id: str) -> Spreadsheet:
 
 
 def create_google_spreadsheet(
-    title: str, parent_folder_ids: list = None, share_anyone: bool = False, share_domains: list = None
+    title: str,
+    parent_folder_ids: list = None,
+    share_anyone: bool = False,
+    share_domains: list = None,
 ) -> Spreadsheet:
     """Create a new spreadsheet and open gspread object for it.
     .. note ::
@@ -202,7 +207,6 @@ def create_google_spreadsheet(
 
     elif share_domains:
         for domain in share_domains:
-
             # https://developers.google.com/drive/v3/web/manage-sharing#roles
             # https://developers.google.com/drive/v3/reference/permissions#resource-representations
             domain_permission = {
@@ -213,7 +217,9 @@ def create_google_spreadsheet(
                 "allowFileDiscovery": True,
             }
 
-            req = drive_api.permissions().create(fileId=spread_id, body=domain_permission, fields="id")
+            req = drive_api.permissions().create(
+                fileId=spread_id, body=domain_permission, fields="id"
+            )
 
             req.execute()
 

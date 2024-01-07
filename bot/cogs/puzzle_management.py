@@ -14,6 +14,7 @@ from bot.database.models import PuzzleData, PuzzleNotes
 
 logger = logging.getLogger(__name__)
 
+
 class PuzzleManagement(BaseCog):
     PRIORITIES = ["low", "medium", "high", "very high"]
 
@@ -81,11 +82,15 @@ class PuzzleManagement(BaseCog):
         if guild_settings.discussion_channel == interaction.channel.name:
             if round_settings:
                 await round_settings.update(round_url=round_url).apply()
-                await interaction.response.send_message(f":white_check: Updated `round_url` to {round_url}")
+                await interaction.response.send_message(
+                    f":white_check: Updated `round_url` to {round_url}"
+                )
             else:
                 await interaction.response.send_message("Round not found")
         else:
-            await interaction.response.send_message(f"Not in round discussion channel: {guild_settings.discussion_channel}")
+            await interaction.response.send_message(
+                f"Not in round discussion channel: {guild_settings.discussion_channel}"
+            )
 
     @app_commands.command()
     async def info(self, interaction: discord.Interaction):
@@ -98,12 +103,23 @@ class PuzzleManagement(BaseCog):
         settings = await database.query_guild(interaction.guild.id)
         channel_cog = self.bot.get_cog("ChannelManagement")
         if channel_cog is None:
-            raise GeneralAppError("Unable to contact other cogs -- perhaps the server is misconfigured?")
-        await interaction.response.send_message(embed=channel_cog.build_channel_info_message(settings.discussion_channel, interaction.channel))
+            raise GeneralAppError(
+                "Unable to contact other cogs -- perhaps the server is misconfigured?"
+            )
+        await interaction.response.send_message(
+            embed=channel_cog.build_channel_info_message(
+                settings.discussion_channel, interaction.channel
+            )
+        )
 
-    async def update_puzzle_attr_by_command(self, interaction: discord.Interaction,
-                                            attr: str, value: Optional[str], message: Optional[str] = None,
-                                            reply: bool =True) -> Optional[PuzzleData]:
+    async def update_puzzle_attr_by_command(
+        self,
+        interaction: discord.Interaction,
+        attr: str,
+        value: Optional[str],
+        message: Optional[str] = None,
+        reply: bool = True,
+    ) -> Optional[PuzzleData]:
         """Common pattern where we want to update a single field in PuzzleData based on command"""
         puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
         if not puzzle_data:
@@ -112,8 +128,8 @@ class PuzzleManagement(BaseCog):
 
         if puzzle_data.is_solved():
             await interaction.response.send_message(
-                 ":warning: Please note that this puzzle has already been marked as solved, "
-                 f"with solution `{puzzle_data.solution}`"
+                ":warning: Please note that this puzzle has already been marked as solved, "
+                f"with solution `{puzzle_data.solution}`"
             )
 
         message = message or attr
@@ -126,11 +142,17 @@ class PuzzleManagement(BaseCog):
             await interaction.response.send_message(embed=embed)
         return puzzle_data
 
-    async def send_state(self, interaction: discord.Interaction, puzzle_data: PuzzleData, description=None):
+    async def send_state(
+        self, interaction: discord.Interaction, puzzle_data: PuzzleData, description=None
+    ):
         """Send simple embed showing relevant links"""
         embed = discord.Embed(description=description)
         embed.add_field(name="Hunt URL", value=puzzle_data.hunt_url or "?")
-        spreadsheet_url = urls.spreadsheet_url(puzzle_data.google_sheet_id) if puzzle_data.google_sheet_id else "?"
+        spreadsheet_url = (
+            urls.spreadsheet_url(puzzle_data.google_sheet_id)
+            if puzzle_data.google_sheet_id
+            else "?"
+        )
         embed.add_field(name="Google Drive", value=spreadsheet_url)
         embed.add_field(name="Status", value=puzzle_data.status or "?")
         embed.add_field(name="Type", value=puzzle_data.puzzle_type or "?")
@@ -140,10 +162,14 @@ class PuzzleManagement(BaseCog):
     @app_commands.command()
     async def link(self, interaction: discord.Interaction, *, url: Optional[str]):
         """*Show or update link to puzzle*"""
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "hunt_url", url, reply=False)
+        puzzle_data = await self.update_puzzle_attr_by_command(
+            interaction, "hunt_url", url, reply=False
+        )
         if puzzle_data:
             await self.send_state(
-                interaction, puzzle_data, description=":white_check_mark: I've updated:" if url else None
+                interaction,
+                puzzle_data,
+                description=":white_check_mark: I've updated:" if url else None,
             )
 
     @app_commands.command()
@@ -153,12 +179,18 @@ class PuzzleManagement(BaseCog):
         if url:
             file_id = urls.extract_id_from_url(url)
             if not file_id:
-                interaction.response.send_message(f":exclamation: Invalid Google Drive URL, unable to extract file ID: {url}")
+                interaction.response.send_message(
+                    f":exclamation: Invalid Google Drive URL, unable to extract file ID: {url}"
+                )
 
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "google_sheet_id", file_id, reply=False)
+        puzzle_data = await self.update_puzzle_attr_by_command(
+            interaction, "google_sheet_id", file_id, reply=False
+        )
         if puzzle_data:
             await self.send_state(
-                interaction, puzzle_data, description=":white_check_mark: I've updated:" if url else None
+                interaction,
+                puzzle_data,
+                description=":white_check_mark: I've updated:" if url else None,
             )
 
     @app_commands.command()
@@ -174,30 +206,37 @@ class PuzzleManagement(BaseCog):
         notes = await puzzle_data.query_notes()
 
         if note:
-             # TODO: get the jump_url for last message in channel?
-             # Previously could use the command message itself, but with
-             # slash command there is no longer a message.
-             new_note = await puzzle_data.commit_note(note)
-             message = (
-                 f"Added a new note! Use `/erase_note {len(notes) + 1}` to remove the note if needed. "
-                 f"Check `/note` for the current list of notes."
-             )
-             notes.append(new_note)
+            # TODO: get the jump_url for last message in channel?
+            # Previously could use the command message itself, but with
+            # slash command there is no longer a message.
+            new_note = await puzzle_data.commit_note(note)
+            message = (
+                f"Added a new note! Use `/erase_note {len(notes) + 1}` to remove the note if needed. "
+                f"Check `/note` for the current list of notes."
+            )
+            notes.append(new_note)
         await self._respond_show_notes(interaction, notes, message)
 
-    async def _respond_show_notes(self, interaction: discord.Interaction, notes: List[PuzzleNotes], message: Optional[str]):
+    async def _respond_show_notes(
+        self, interaction: discord.Interaction, notes: List[PuzzleNotes], message: Optional[str]
+    ):
         """Respond to command by listing notes"""
         if notes:
             embed = discord.Embed(description=message)
             embed.add_field(
                 name="Notes",
-                value="\n".join([
-                    # TODO: include jump_urls here once supported
-                    f"{i+1}: {note_obj.text}" for i, note_obj in enumerate(notes)
-                ])
+                value="\n".join(
+                    [
+                        # TODO: include jump_urls here once supported
+                        f"{i+1}: {note_obj.text}"
+                        for i, note_obj in enumerate(notes)
+                    ]
+                ),
             )
         else:
-            embed = discord.Embed(description="No notes left yet, use `/note my note here` to leave a note")
+            embed = discord.Embed(
+                description="No notes left yet, use `/note my note here` to leave a note"
+            )
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
@@ -235,32 +274,46 @@ class PuzzleManagement(BaseCog):
     @app_commands.command()
     async def status(self, interaction: discord.Interaction, *, status: Optional[str]):
         """*Show or update puzzle status, e.g. "extracting"*"""
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "status", status, reply=False)
+        puzzle_data = await self.update_puzzle_attr_by_command(
+            interaction, "status", status, reply=False
+        )
         if puzzle_data:
             await self.send_state(
-                interaction, puzzle_data, description=":white_check_mark: I've updated:" if status else None
+                interaction,
+                puzzle_data,
+                description=":white_check_mark: I've updated:" if status else None,
             )
 
     @app_commands.command()
     async def type(self, interaction: discord.Interaction, *, puzzle_type: Optional[str]):
         """*Show or update puzzle type, e.g. "crossword"*"""
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "puzzle_type", puzzle_type, reply=False)
+        puzzle_data = await self.update_puzzle_attr_by_command(
+            interaction, "puzzle_type", puzzle_type, reply=False
+        )
         if puzzle_data:
             await self.send_state(
-                interaction, puzzle_data, description=":white_check_mark: I've updated:" if puzzle_type else None
+                interaction,
+                puzzle_data,
+                description=":white_check_mark: I've updated:" if puzzle_type else None,
             )
 
     @app_commands.command()
     async def priority(self, interaction: discord.Interaction, *, priority: Optional[str]):
         """*Show or update puzzle priority, one of "low", "medium", "high"*"""
         if priority is not None and priority not in self.PRIORITIES:
-            await interaction.response.send_message(f":exclamation: Priority should be one of {self.PRIORITIES}, got \"{priority}\"")
+            await interaction.response.send_message(
+                f':exclamation: Priority should be one of {self.PRIORITIES}, got "{priority}"'
+            )
             return
 
-        puzzle_data = await self.update_puzzle_attr_by_command(interaction, "priority", priority, reply=False)
+        puzzle_data = await self.update_puzzle_attr_by_command(
+            interaction, "priority", priority, reply=False
+        )
         if puzzle_data:
             await self.send_state(
-                interaction, puzzle_data, description=":white_check_mark: I've updated:" if priority else None
+                interaction,
+                puzzle_data,
+                description=":white_check_mark: I've updated:" if priority else None,
             )
 
     @app_commands.command()
@@ -273,9 +326,7 @@ class PuzzleManagement(BaseCog):
 
         solution = solution.strip().upper()
         await puzzle_data.update(
-            status = "solved",
-            solution = solution,
-            solve_time = datetime.datetime.now(tz=pytz.UTC)
+            status="solved", solution=solution, solve_time=datetime.datetime.now(tz=pytz.UTC)
         ).apply()
 
         settings = await database.query_guild(interaction.guild.id)
@@ -283,7 +334,7 @@ class PuzzleManagement(BaseCog):
         embed = discord.Embed(
             description=f"{emoji} :partying_face: Great work! Marked the solution as `{solution}`"
         )
-        delay = float(settings.archive_delay)/60
+        delay = float(settings.archive_delay) / 60
         delay_str = "%g minute" % delay
         if delay != 1.0:
             delay_str = delay_str + "s"
@@ -304,11 +355,7 @@ class PuzzleManagement(BaseCog):
             return
 
         prev_solution = puzzle_data.solution
-        await puzzle_data.update(
-            status = "unsolved",
-            solution = "",
-            solve_time = None
-        ).apply()
+        await puzzle_data.update(status="unsolved", solution="", solve_time=None).apply()
 
         settings = await database.query_guild(interaction.guild.id)
         emoji = settings.discord_bot_emoji
@@ -318,6 +365,6 @@ class PuzzleManagement(BaseCog):
         )
         await interaction.response.send_message(embed=embed)
 
+
 async def setup(bot):
     await bot.add_cog(PuzzleManagement(bot))
-

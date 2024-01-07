@@ -14,10 +14,11 @@ class PuzzleData(db.Model):
 
     # NOTE: round_id is being set to the discord category UID, and not
     # the PK of the round_data table.
-    round_id = db.Column(db.BIGINT,
-                         db.ForeignKey("round_data.category_id",
-                                       onupdate="CASCADE", ondelete="CASCADE"),
-                         default=0)
+    round_id = db.Column(
+        db.BIGINT,
+        db.ForeignKey("round_data.category_id", onupdate="CASCADE", ondelete="CASCADE"),
+        default=0,
+    )
 
     ### These should just be pulled from relationship to round:
     round_name = db.Column(db.Text)
@@ -52,22 +53,16 @@ class PuzzleData(db.Model):
     async def get_or_create(cls, guild_id: int, channel_id: int, **kwargs) -> "PuzzleData":
         """query puzzle data, create if it does not exist"""
         puzzle = await cls.query.where(
-            (cls.guild_id == guild_id) &
-            (cls.channel_id == channel_id)
+            (cls.guild_id == guild_id) & (cls.channel_id == channel_id)
         ).gino.first()
         if puzzle is None:
-            puzzle = await cls.create(
-                guild_id=guild_id,
-                channel_id = channel_id,
-                **kwargs
-            )
+            puzzle = await cls.create(guild_id=guild_id, channel_id=channel_id, **kwargs)
         return puzzle
-    
+
     @classmethod
     async def puzzles_in_round(cls, round_id: int) -> List["PuzzleData"]:
         puzzles = await cls.query.where(
-            (cls.round_id == round_id) &
-            (cls.delete_time == None)
+            (cls.round_id == round_id) & (cls.delete_time == None)
         ).gino.all()
         return puzzles
 
@@ -75,19 +70,14 @@ class PuzzleData(db.Model):
         return self.status == "solved" and self.solve_time is not None
 
     async def query_notes(self) -> List["PuzzleNotes"]:
-        notes = await PuzzleNotes.query.where(
-            PuzzleNotes.puzzle_id == self.id
-        ).gino.all()
+        notes = await PuzzleNotes.query.where(PuzzleNotes.puzzle_id == self.id).gino.all()
         return list(notes)
 
     async def commit_note(self, note_text: str, **kwargs) -> "PuzzleNotes":
         added_time = datetime.datetime.now(tz=pytz.UTC)
         assert self.id >= 0
         return await PuzzleNotes.create(
-            puzzle_id=self.id,
-            text=note_text,
-            added_time=added_time,
-            **kwargs
+            puzzle_id=self.id, text=note_text, added_time=added_time, **kwargs
         )
 
 
@@ -95,10 +85,11 @@ class PuzzleNotes(db.Model):
     __tablename__ = "puzzle_notes"
 
     note_id = db.Column(db.BIGINT, primary_key=True, autoincrement=True)
-    puzzle_id = db.Column(db.BIGINT,
-                         db.ForeignKey("puzzle_data.id",
-                                       onupdate="CASCADE", ondelete="CASCADE"),
-                        nullable=False)
+    puzzle_id = db.Column(
+        db.BIGINT,
+        db.ForeignKey("puzzle_data.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
+    )
     # note_index = db.Column(db.Integer)
     text = db.Column(db.Text)
     user = db.Column(db.Text)

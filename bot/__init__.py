@@ -10,17 +10,22 @@ from bot.database.models import GuildSettings
 
 __version__ = "0.1.0"
 
-invite_link = "https://discordapp.com/api/oauth2/authorize?client_id={}&scope=bot&permissions=377957125136"
+invite_link = (
+    "https://discordapp.com/api/oauth2/authorize?client_id={}&scope=bot&permissions=377957125136"
+)
+
 
 class SkipDatabaseLogs(logging.Filter):
     def filter(self, record):
         return record.name != "gino.engine._SAEngine"
+
 
 async def get_prefix(_bot, message):
     prefix = utils.config.prefix
     if not isinstance(message.channel, discord.DMChannel):
         prefix = utils.get_guild_prefix(_bot, message.guild.id)
     return commands.when_mentioned_or(prefix)(_bot, message)
+
 
 intents = discord.Intents(messages=True, message_content=True, guilds=True)
 bot = commands.AutoShardedBot(command_prefix=get_prefix, intents=intents)
@@ -73,11 +78,11 @@ def setup_logger(log_level=logging.INFO):
     logger.setLevel(log_level)
     handler = logging.StreamHandler()
     handler.setLevel(log_level)
-    handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
     handler.addFilter(SkipDatabaseLogs())
     logger.addHandler(handler)
 
-    discord_logger = logging.getLogger('discord')
+    discord_logger = logging.getLogger("discord")
     discord_logger.setLevel(log_level)
     discord_logger.addHandler(handler)
 
@@ -102,6 +107,6 @@ async def main():
         await load_extensions(bot)
         await bot.start(utils.config.token)
 
+
 def run():
     asyncio.run(main())
-

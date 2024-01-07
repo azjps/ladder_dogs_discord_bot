@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 import logging
 import random
 import sys
@@ -13,6 +13,7 @@ from bot.base_cog import BaseCog, GeneralAppError
 PY_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
 
 logger = logging.getLogger(__name__)
+
 
 class Utility(BaseCog):
     def __init__(self, bot):
@@ -36,7 +37,9 @@ class Utility(BaseCog):
         """*Current uptime of the bot*
         **Example**: `/uptime`"""
         current_time = datetime.now().replace(microsecond=0)
-        await interaction.response.send_message(f"Time since I went online: {current_time - self.start_time}.")
+        await interaction.response.send_message(
+            f"Time since I went online: {current_time - self.start_time}."
+        )
 
     @app_commands.command()
     async def starttime(self, interaction: discord.Interaction):
@@ -86,10 +89,9 @@ class Utility(BaseCog):
         embed.set_footer(text=":ladder: :dog:", icon_url=self.bot.user.avatar_url)
         await interaction.response.send_message(embed=embed)
 
-
     # Based on code found here: https://stackoverflow.com/a/73967436, improved upon thereafter
     @app_commands.command()
-    @app_commands.describe(command = "The command to get help for")
+    @app_commands.describe(command="The command to get help for")
     async def help(self, interaction: discord.Interaction, *, command: Optional[str]):
         """*Shows help for a given command*
         **Example**: `/help help`'"""
@@ -104,17 +106,18 @@ class Utility(BaseCog):
                 command = c
                 break
         try:
-            return discord.Embed(title=command.name,description=command.description)
-        except AttributeError as exc: # if command is not found
+            return discord.Embed(title=command.name, description=command.description)
+        except AttributeError as exc:  # if command is not found
             raise GeneralAppError(f"Command {command} not found") from exc
         return None
 
     def general_help(self):
         names = [command.name for command in self.bot.tree.get_commands()]
         available_commands = "\n".join(sorted(names))
-        embed = discord.Embed(title=f"Commands ({len(names)}):",description=available_commands)
+        embed = discord.Embed(title=f"Commands ({len(names)}):", description=available_commands)
         embed.set_footer(text=f"🛈  /help <command> (e.g /help {random.choice(names)})")
         return embed
+
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))

@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from discord.ext import commands 
+from discord.ext import commands
 
 from bot import database
 from bot.database.models import PuzzleData
@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 """
 Base cog class which holds some common code for all of the cogs in this application.
 """
-class BaseCog(commands.Cog):
 
+
+class BaseCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -40,7 +41,9 @@ class BaseCog(commands.Cog):
             # Channel name matches setting (note, channel name might not be unique)
             return True
 
-        await interaction.response.send_message(f":exclamation: Most bot commands should be sent to #{settings.discord_bot_channel}")
+        await interaction.response.send_message(
+            f":exclamation: Most bot commands should be sent to #{settings.discord_bot_channel}"
+        )
         return False
 
     async def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
@@ -62,7 +65,9 @@ class BaseCog(commands.Cog):
         except MissingPuzzleError:
             # Not the cleanest, just try to guess the original category id
             # A DB would be useful here, then can directly query on solved_channel_id ..
-            logger.error(f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}")
+            logger.error(
+                f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}"
+            )
             return None
 
 
