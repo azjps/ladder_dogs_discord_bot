@@ -156,13 +156,13 @@ class PuzzleManagement(BaseCog):
 
         message = "Showing notes left by users!"
 
-        notes = puzzle_data.query_notes()
+        notes = await puzzle_data.query_notes()
 
         if note:
              # TODO: get the jump_url for last message in channel?
              # Previously could use the command message itself, but with
              # slash command there is no longer a message.
-             new_note = puzzle_data.commit_note(note)
+             new_note = await puzzle_data.commit_note(note)
              message = (
                  f"Added a new note! Use `/erase_note {len(notes) + 1}` to remove the note if needed. "
                  f"Check `/note` for the current list of notes."
@@ -202,7 +202,7 @@ class PuzzleManagement(BaseCog):
         # will cause a different note to get deleted.
         # As this is not a common operation, for now will just
         # leave as a unfortunate to-do.
-        notes = self.query_notes()
+        notes = await puzzle_data.query_notes()
 
         if 1 <= note_index <= len(notes):
             note = notes[note_index]
@@ -211,7 +211,7 @@ class PuzzleManagement(BaseCog):
         else:
             description = f"Unable to find note {note_index}"
 
-        notes = self.query_notes()
+        notes = await puzzle_data.query_notes()
 
         embed = discord.Embed(description=description)
         embed.add_field(

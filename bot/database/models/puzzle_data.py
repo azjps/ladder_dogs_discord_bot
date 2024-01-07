@@ -75,7 +75,7 @@ class PuzzleData(db.Model):
         return self.status == "solved" and self.solve_time is not None
 
     @classmethod
-    async def query_notes(self) -> list["PuzzleNotes"]:
+    async def query_notes(self):
         notes = await PuzzleNotes.query.where(
             PuzzleNotes.puzzle_id == self.id
         ).gino.all()
