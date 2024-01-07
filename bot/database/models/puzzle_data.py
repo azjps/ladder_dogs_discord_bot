@@ -56,11 +56,10 @@ class PuzzleData(db.Model):
             (cls.channel_id == channel_id)
         ).gino.first()
         if puzzle is None:
-            puzzle = await cls.create()
-            await puzzle.update(
+            puzzle = await cls.create(
                 guild_id=guild_id,
                 channel_id = channel_id
-            ).apply()
+            )
         return puzzle
     
     @classmethod
@@ -82,11 +81,13 @@ class PuzzleData(db.Model):
         return notes
 
     @classmethod
-    async def commit_note(self, note_text: str, jump_url: Optional[str]):
+    async def commit_note(self, note_text: str, **kwargs):
         added_time = datetime.datetime.now(tz=pytz.UTC)
         return await PuzzleNotes.create(
             puzzle_id=self.id,
-            text=note_text, jump_url=jump_url, added_time=added_time,
+            text=note_text,
+            added_time=added_time,
+            **kwargs
         )
 
 
