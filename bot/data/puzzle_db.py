@@ -35,7 +35,7 @@ class PuzzleDb:
 			(PuzzleData.channel_id == puzzle_id)
 		).gino.first()
         if puzzle is None:
-            raise MissingPuzzleError(f"Unable to find puzzle {puzzle_id} for {round_id}")
+            raise MissingPuzzleError(f"Unable to find puzzle {puzzle_id} for guild {guild_id}")
         return puzzle
 
     @classmethod

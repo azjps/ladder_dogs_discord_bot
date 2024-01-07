@@ -85,7 +85,7 @@ class PuzzleManagement(BaseCog):
             else:
                 await interaction.response.send_message("Round not found")
         else:
-            await interaction.response.send_message(f"Not in round discussion channel: {hunt_settings.discussion_channel}")
+            await interaction.response.send_message(f"Not in round discussion channel: {guild_settings.discussion_channel}")
 
     @app_commands.command()
     async def info(self, interaction: discord.Interaction):
@@ -98,7 +98,7 @@ class PuzzleManagement(BaseCog):
         settings = await database.query_guild(interaction.guild.id)
         channel_cog = self.bot.get_cog("ChannelManagement")
         if channel_cog is None:
-            raise GeneralAppError(f"Unable to contact other cogs -- perhaps the server is misconfigured?")
+            raise GeneralAppError("Unable to contact other cogs -- perhaps the server is misconfigured?")
         await interaction.response.send_message(embed=channel_cog.build_channel_info_message(settings.discussion_channel, interaction.channel))
 
     async def update_puzzle_attr_by_command(self, interaction: discord.Interaction,

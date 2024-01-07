@@ -10,7 +10,7 @@ import pytz
 from bot.base_cog import BaseCog, GeneralAppError
 from bot.data.puzzle_db import PuzzleDb
 from bot import database
-from bot.database.models import PuzzleData, RoundData, HuntSettings
+from bot.database.models import PuzzleData, RoundData
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,7 @@ class ChannelManagement(BaseCog):
 
         Can be posted in either a #general channel or the bot channel
         """
-        guild = interaction.guild
-        settings = await database.query_guild(interaction.guild.id)
+        # settings = await database.query_guild(interaction.guild.id)
         if not hunt_round:
             category = interaction.channel.category
             if category and category.name != "Text Channels":
@@ -361,7 +360,7 @@ class ChannelManagement(BaseCog):
             emoji = settings.discord_bot_emoji
             await interaction.response.send_message(f"{emoji} Noted, will no longer be deleting this channel.")
         else:
-            await interaction.response.send_message(f":exclamation: Channel isn't being deleted, nothing to undelete")
+            await interaction.response.send_message(":exclamation: Channel isn't being deleted, nothing to undelete")
 
     async def process_deleted_puzzles(self, guild: discord.Guild):
         """Deletes puzzles for which sufficient time has elapsed since being marked for deletion.
@@ -425,7 +424,7 @@ class ChannelManagement(BaseCog):
         # an empty string.
         if not base_url or len(base_url) <= len("https://"):
             logger.error("base_url required for delete_all")
-            await interaction.response.send_message(f":exclamation: base_url required for delete_all")
+            await interaction.response.send_message(":exclamation: base_url required for delete_all")
             return
 
         puzzles = await PuzzleDb.get_all(interaction.guild.id)

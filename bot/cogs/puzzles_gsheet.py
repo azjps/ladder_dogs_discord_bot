@@ -14,7 +14,6 @@ import gspread_asyncio
 import gspread_formatting
 
 from bot.base_cog import BaseCog
-from bot.data.puzzle_db import PuzzleDb
 from bot.utils import urls
 from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import copy_spreadsheet, create_spreadsheet, get_manager

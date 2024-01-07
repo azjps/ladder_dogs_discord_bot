@@ -1,8 +1,6 @@
-import copy
 import datetime
 import json
 
-import pytest
 
 from bot.utils.puzzles_data import PuzzleData
 

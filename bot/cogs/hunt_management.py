@@ -6,7 +6,6 @@ from discord.ext import commands
 
 from bot.base_cog import BaseCog
 from bot import database
-from bot.database.models import HuntSettings 
 
 logger = logging.getLogger(__name__)
 

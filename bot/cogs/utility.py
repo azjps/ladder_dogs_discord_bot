@@ -105,8 +105,8 @@ class Utility(BaseCog):
                 break
         try:
             return discord.Embed(title=command.name,description=command.description)
-        except AttributeError: # if command is not found
-            raise GeneralAppError(f"Command {command} not found")
+        except AttributeError as exc: # if command is not found
+            raise GeneralAppError(f"Command {command} not found") from exc
         return None
 
     def general_help(self):
