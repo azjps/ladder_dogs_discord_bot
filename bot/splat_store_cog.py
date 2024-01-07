@@ -24,7 +24,7 @@ class BaseCog(commands.Cog):
     async def cog_app_command_error(self, interaction, error):
         logger.exception(error)
         if interaction.response.is_done():
-            await interaction.response.edit_message(":exclamation: " + str(error))
+            await interaction.response.edit_message(content=":exclamation: " + str(error))
         else:
             await interaction.response.send_message(":exclamation: " + str(error))
 
