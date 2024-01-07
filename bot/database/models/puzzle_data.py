@@ -74,18 +74,15 @@ class PuzzleData(db.Model):
     def is_solved(self):
         return self.status == "solved" and self.solve_time is not None
 
-    @classmethod
     async def query_notes(self):
         notes = await PuzzleNotes.query.where(
             PuzzleNotes.puzzle_id == self.id
         ).gino.all()
         return list(notes)
 
-    @classmethod
     async def commit_note(self, note_text: str, **kwargs):
         added_time = datetime.datetime.now(tz=pytz.UTC)
         assert self.id >= 0
-        print("Adding note for", self, self.id)
         return await PuzzleNotes.create(
             puzzle_id=self.id,
             text=note_text,
