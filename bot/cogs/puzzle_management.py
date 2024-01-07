@@ -1,16 +1,16 @@
 import datetime
 import logging
-from typing import Optional
+from typing import List, Optional
 
 import discord
 from discord import app_commands
 import pytz
 
-from bot.splat_store_cog import BaseCog, GeneralAppError
+from bot.base_cog import BaseCog, GeneralAppError
 from bot.data.puzzle_db import PuzzleDb
 from bot.utils import urls
 from bot import database
-from bot.database.models import PuzzleData
+from bot.database.models import PuzzleData, PuzzleNotes
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,21 @@ class PuzzleManagement(BaseCog):
 
     async def send_not_puzzle_channel(self, interaction):
         await interaction.response.send_message("This does not appear to be a puzzle channel")
+
+    @app_commands.command()
+    async def set_round_url(self, interaction: discord.Interaction, round_url: str):
+        guild = interaction.guild
+        category = interaction.channel.category
+        hunt_settings = await database.query_hunt_settings_by_round(guild.id, category.id)
+        round_settings = await database.query_round_data(guild.id, category.id)
+        if hunt_settings.discussion_channel == interaction.channel.name:
+            if round_settings:
+                await round_settings.update(round_url=round_url).apply()
+                interaction.response.send_message(f":white_check: Updated `round_url` to {round_url}")
+            else:
+                interaction.response.send_message("Round not found")
+        else:
+            interaction.response.send_message(f"Not in round discussion channel: {hunt_settings.discussion_channel}")
 
     @app_commands.command()
     async def info(self, interaction: discord.Interaction):
@@ -168,9 +183,12 @@ class PuzzleManagement(BaseCog):
                  f"Check `/note` for the current list of notes."
              )
              notes.append(new_note)
+        await self._respond_show_notes(interaction, notes, message)
 
+    async def _respond_show_notes(self, interaction: discord.Interaction, notes: List[PuzzleNotes], message: Optional[str]):
+        """Respond to command by listing notes"""
         if notes:
-            embed = discord.Embed(description=f"{message}")
+            embed = discord.Embed(description=message)
             embed.add_field(
                 name="Notes",
                 value="\n".join([
@@ -212,13 +230,7 @@ class PuzzleManagement(BaseCog):
             description = f"Unable to find note {note_index}"
 
         notes = await puzzle_data.query_notes()
-
-        embed = discord.Embed(description=description)
-        embed.add_field(
-            name="Notes",
-            value="\n".join([f"{i+1}, {puzzle_data.notes[i]}" for i in range(len(puzzle_data.notes))])
-        )
-        await interaction.response.send_message(embed=embed)
+        await self._respond_show_notes(interaction, notes, description)
 
     @app_commands.command()
     async def status(self, interaction: discord.Interaction, *, status: Optional[str]):

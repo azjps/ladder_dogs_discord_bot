@@ -13,7 +13,7 @@ from discord.ext import tasks
 import gspread_asyncio
 import gspread_formatting
 
-from bot.splat_store_cog import BaseCog
+from bot.base_cog import BaseCog
 from bot.data.puzzle_db import PuzzleDb
 from bot.utils import urls
 from bot.utils.gdrive import get_or_create_folder, rename_file

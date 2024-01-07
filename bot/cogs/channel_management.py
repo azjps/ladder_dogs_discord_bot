@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import pytz
 
-from bot.splat_store_cog import BaseCog, GeneralAppError
+from bot.base_cog import BaseCog, GeneralAppError
 from bot.data.puzzle_db import PuzzleDb
 from bot import database
 from bot.database.models import PuzzleData, RoundData, HuntSettings
@@ -164,21 +164,30 @@ class ChannelManagement(BaseCog):
         )
         guild_settings = await database.query_guild(guild.id)
         hunt_settings = await database.query_hunt_settings_by_round(guild.id, category.id)
+        round_settings = await database.query_round_data(guild.id, category.id)
         if created_text:
             if not url and hunt_settings.hunt_url:
                 # NOTE: this is a heuristic and may need to be updated!
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
-                hunt_url_base = hunt_settings.hunt_url.rstrip("/")
-                hunt_name = category_name.lower().replace("-", hunt_settings.hunt_url_sep)
+                url_sep = round_settings.round_url_sep or hunt_settings.hunt_url_sep
+                # NOTE: in some years, there may be a different website for
+                # a round, so can adjust urls on a per-round basis
+                url_base = round_settings.round_url
+                if url_base:
+                    url_base = url_base.rstrip("/")
+                else:
+                    url_base = hunt_settings.hunt_url.rstrip("/")
                 if channel_name == guild_settings.discussion_channel:
+                    url_name = category_name.lower().replace("-", url_sep)
                     # Use the round name in the URL
-                    hunt_round_base = hunt_url_base
+                    hunt_round_base = url_base
                     if hunt_settings.hunt_round_url:
                         hunt_round_base = hunt_settings.hunt_round_url.rstrip("/")
-                    url = f"{hunt_round_base}/{hunt_name}"
+                    url = f"{hunt_round_base}/{url_name}"
                 else:
-                    url = f"{hunt_url_base}/{hunt_name}"
+                    url_name = channel_name.lower().replace("-", url_sep)
+                    url = f"{url_base}/{url_name}"
             puzzle_data = await database.query_puzzle_data(
                 guild_id = interaction.guild.id, channel_id = text_channel.id,
                 round_id=category.id,

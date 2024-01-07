@@ -8,7 +8,7 @@ from typing import Optional
 import discord
 from discord import app_commands
 
-from bot.splat_store_cog import BaseCog, GeneralAppError
+from bot.base_cog import BaseCog, GeneralAppError
 
 PY_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
 

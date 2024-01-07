@@ -1,9 +1,9 @@
-# *Storage Discord Bot
-This discord bot is a fork of the bot created by Ladder Dogs to manage their hunt status in Discord.  Some design decisions didn't work 100% for our team, as well as some additional feature additions, but the initial implementation is stellar, you can find it at https://github.com/azjps/ladder_dogs_discord_bot
+# Discord Bot for Ladder Dogs
+Simple discord bot which manages puzzle channels for puzzle hunts via discord commands, used by a small-to-medium sized team.
 
-# Roadmap
+This was initially created from [`cookiecutter-discord.py-postgres`](https://github.com/makupi/cookiecutter-discord.py-postgres) and uses [`aiogoogle`](https://aiogoogle.readthedocs.io/en/latest/)/[`gspread_asyncio`](https://gspread-asyncio.readthedocs.io/en/latest/index.html) for (optional) Google Drive integration. It uses [`gino`](https://python-gino.org/) to store puzzle metadata in a PostgreSQL database.
 
-I plan to change this over to using postgres as a backend, running Docker-first, switching from !commands to /commands, and adding some work to mesh better with our Sheets system, as well as some other minor QOL fixes as I see them.
+Thanks to a few other teams who have helped to improve on the bot's features. Credit especially to [@AkbarTheGreat on Splat](https://github.com/AkbarTheGreat/splat_storage_discord_bot) for adding the discord slash commands and PostgreSQL backend support.
 
 # Usage
 
@@ -95,21 +95,28 @@ DB_PASSWORD=CHANGEME
 For the Google Drive integration (optional -- comment out the `gsheet` cog if not desired), create a [Google service account (for example see these instructions from `gspread`)](
 https://gspread.readthedocs.io/en/latest/oauth2.html#enable-api-access), and save the service account key JSON file as `google_secrets.json`.
 
-Now you can run the bot by running the following in a shell: `docker compose up`
+Now you can run the bot by running the following in a shell: `docker compose up`. On a barebones VM, you may first have to install Docker & `docker-compose`:
+```bash
+sudo yum install docker -y
+sudo systemctl start docker
+# Check docker-compose website for relevant release
+curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64 -o bin/docker-compose
+sudo ~/bin/docker-compose up
+```
 
 To launch a postgres cli shell to see the state of the database:
-```
+```bash
 sudo docker ps
 sudo docker exec -it ladder_dogs_discord_bot-db-1 psql -U postgres
 ```
 
 To launch an interactive python shell with the same environment:
-```
+```bash
 sudo docker-compose run bot sh
 pipenv run python
 ```
 
-If you're interested in running the latest released version somewhere and don't want to build it yourself, I provide a docker image on dockerhub, that can be retrieved with `docker pull akbarthegreat/splat-storage-discord`
+If you're interested in running the latest released version somewhere and don't want to build it yourself, @AkbarTheGreat has a docker image on dockerhub, that can be retrieved with `docker pull akbarthegreat/splat-storage-discord`
 
 ## Tests
 
