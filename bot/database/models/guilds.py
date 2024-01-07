@@ -20,7 +20,7 @@ class GuildSettings(db.Model):
     archive_delay = db.Column(db.Integer, default = 300)            # Delay for items to be archived, in seconds
 
     @classmethod
-    async def get_or_create(cls, guild_id: int):
+    async def get_or_create(cls, guild_id: int) -> "GuildSettings":
         """query guild, create if it does not exist"""
         guild = await cls.get(guild_id)
         if guild is None:
@@ -43,6 +43,8 @@ class GuildSettings(db.Model):
         await self.update(**values).apply()
 
     def to_json(self):
+        # TODO: use json.dumps() & mapper.attrs
+        # https://stackoverflow.com/questions/2537471/method-of-iterating-over-sqlalchemy-models-defined-columns
         return textwrap.dedent(f"""
                {{ "guild_id": {self.id},
                  "prefix": "{self.guild_name}",

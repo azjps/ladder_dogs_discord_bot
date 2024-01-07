@@ -76,16 +76,16 @@ class PuzzleManagement(BaseCog):
     async def set_round_url(self, interaction: discord.Interaction, round_url: str):
         guild = interaction.guild
         category = interaction.channel.category
-        hunt_settings = await database.query_hunt_settings_by_round(guild.id, category.id)
+        guild_settings = await database.query_guild(guild.id)
         round_settings = await database.query_round_data(guild.id, category.id)
-        if hunt_settings.discussion_channel == interaction.channel.name:
+        if guild_settings.discussion_channel == interaction.channel.name:
             if round_settings:
                 await round_settings.update(round_url=round_url).apply()
-                interaction.response.send_message(f":white_check: Updated `round_url` to {round_url}")
+                await interaction.response.send_message(f":white_check: Updated `round_url` to {round_url}")
             else:
-                interaction.response.send_message("Round not found")
+                await interaction.response.send_message("Round not found")
         else:
-            interaction.response.send_message(f"Not in round discussion channel: {hunt_settings.discussion_channel}")
+            await interaction.response.send_message(f"Not in round discussion channel: {hunt_settings.discussion_channel}")
 
     @app_commands.command()
     async def info(self, interaction: discord.Interaction):
@@ -223,7 +223,7 @@ class PuzzleManagement(BaseCog):
         notes = await puzzle_data.query_notes()
 
         if 1 <= note_index <= len(notes):
-            note = notes[note_index]
+            note = notes[note_index - 1]
             description = f"Erased note {note_index}: `{note.text}` - {note.jump_url}"
             await note.delete()
         else:

@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import List
 
 import pytz
 
@@ -49,7 +49,7 @@ class PuzzleData(db.Model):
         self._notes = None
 
     @classmethod
-    async def get_or_create(cls, guild_id: int, channel_id: int, **kwargs):
+    async def get_or_create(cls, guild_id: int, channel_id: int, **kwargs) -> "PuzzleData":
         """query puzzle data, create if it does not exist"""
         puzzle = await cls.query.where(
             (cls.guild_id == guild_id) &
@@ -64,7 +64,7 @@ class PuzzleData(db.Model):
         return puzzle
     
     @classmethod
-    async def puzzles_in_round(cls, round_id: int):
+    async def puzzles_in_round(cls, round_id: int) -> List["PuzzleData"]:
         puzzles = await cls.query.where(
             (cls.round_id == round_id) &
             (cls.delete_time == None)
@@ -74,13 +74,13 @@ class PuzzleData(db.Model):
     def is_solved(self):
         return self.status == "solved" and self.solve_time is not None
 
-    async def query_notes(self):
+    async def query_notes(self) -> List["PuzzleNotes"]:
         notes = await PuzzleNotes.query.where(
             PuzzleNotes.puzzle_id == self.id
         ).gino.all()
         return list(notes)
 
-    async def commit_note(self, note_text: str, **kwargs):
+    async def commit_note(self, note_text: str, **kwargs) -> "PuzzleNotes":
         added_time = datetime.datetime.now(tz=pytz.UTC)
         assert self.id >= 0
         return await PuzzleNotes.create(
