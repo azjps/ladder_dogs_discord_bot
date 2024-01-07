@@ -179,7 +179,10 @@ class ChannelManagement(BaseCog):
                     url = f"{hunt_round_base}/{hunt_name}"
                 else:
                     url = f"{hunt_url_base}/{hunt_name}"
-            puzzle_data = await database.query_puzzle_data(guild_id = interaction.guild.id, channel_id = text_channel.id)
+            puzzle_data = await database.query_puzzle_data(
+                guild_id = interaction.guild.id, channel_id = text_channel.id,
+                round_id=category.id,
+            )
             await puzzle_data.update(
                 name=channel_name,
                 round_name=category_name,

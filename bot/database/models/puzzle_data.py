@@ -49,7 +49,7 @@ class PuzzleData(db.Model):
         self._notes = None
 
     @classmethod
-    async def get_or_create(cls, guild_id: int, channel_id: int):
+    async def get_or_create(cls, guild_id: int, channel_id: int, **kwargs):
         """query puzzle data, create if it does not exist"""
         puzzle = await cls.query.where(
             (cls.guild_id == guild_id) &
@@ -58,7 +58,8 @@ class PuzzleData(db.Model):
         if puzzle is None:
             puzzle = await cls.create(
                 guild_id=guild_id,
-                channel_id = channel_id
+                channel_id = channel_id,
+                **kwargs
             )
         return puzzle
     
