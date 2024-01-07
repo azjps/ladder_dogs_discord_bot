@@ -159,7 +159,10 @@ class PuzzleManagement(BaseCog):
         notes = puzzle_data.query_notes()
 
         if note:
-             new_note = puzzle_data.commit_note(note, jump_url=interaction.message.jump_url)
+             # TODO: get the jump_url for last message in channel?
+             # Previously could use the command message itself, but with
+             # slash command there is no longer a message.
+             new_note = puzzle_data.commit_note(note)
              message = (
                  f"Added a new note! Use `/erase_note {len(notes) + 1}` to remove the note if needed. "
                  f"Check `/note` for the current list of notes."
@@ -171,7 +174,8 @@ class PuzzleManagement(BaseCog):
             embed.add_field(
                 name="Notes",
                 value="\n".join([
-                    f"{i+1}: {note_obj.text} - {note_obj.jump_url}" for i, note_obj in enumerate(notes)
+                    # TODO: include jump_urls here once supported
+                    f"{i+1}: {note_obj.text}" for i, note_obj in enumerate(notes)
                 ])
             )
         else:

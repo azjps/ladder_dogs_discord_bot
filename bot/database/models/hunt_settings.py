@@ -1,4 +1,4 @@
-import textwrap
+import json
 from typing import Dict
 
 from bot.database import db
@@ -15,6 +15,7 @@ class HuntSettings(db.Model):
     hunt_round_url = db.Column(db.Text)                             # If specified, a different url to use for rounds, defaults to hunt_url
     drive_hunt_folder_id = db.Column(db.Text)                       # The directory for all of this hunt's spreadsheets
     drive_nexus_sheet_id = db.Column(db.Text)                       # Refer to gsheet_nexus.py
+    # drive_resources_id = db.Column(db.Text)                         # Document with resources links, etc
 
     @classmethod
     async def get_or_create_by_name(cls, guild_id: int, hunt_name: str):
@@ -24,11 +25,10 @@ class HuntSettings(db.Model):
             (cls.hunt_name == hunt_name)
         ).gino.first()
         if settings is None:
-            settings = await cls.create()
-            await settings.update(
+            settings = await cls.create(
                 guild_id=guild_id,
-                hunt_name = hunt_name
-            ).apply()
+                hunt_name=hunt_name,
+            )
         return settings
 
     # I don't love managing this way, but I can't find anything in SQLAlchemy about introspecting columns after they're created.
@@ -54,16 +54,15 @@ class HuntSettings(db.Model):
         await self.update(**values).apply()
 
     def to_json(self):
-        return textwrap.dedent(f"""
-               {{ "guild_id": {self.guild_id},
-                 "hunt_name": {self.hunt_name},
-                 "hunt_url": "{self.hunt_url}",
-                 "hunt_url_sep": "{self.hunt_url_sep}",
-                 "hunt_round_url": "{self.hunt_round_url}",
-                 "drive_hunt_folder_id": "{self.drive_hunt_folder_id}",
-                 "drive_nexus_sheet_id": "{self.drive_nexus_sheet_id}",
-               }}
-        """).strip()
+        return json.dumps(
+            {k: getattr(self, k) for k in 
+             ("guild_id", "hunt_name", "hunt_url", "hunt_url_sep",
+              "hunt_round_url", "drive_hunt_folder_id", 
+              "drive_nexus_sheet_id",
+              # "drive_resources_id",
+              )},
+            indent=4,
+        )
 
 class HuntNotFoundError(RuntimeError):
     pass
