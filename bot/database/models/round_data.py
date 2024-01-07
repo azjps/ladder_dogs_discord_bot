@@ -20,10 +20,10 @@ class RoundData(db.Model):
         """query round data, create if it does not exist"""
         round_data = await cls.query_by_category(category)
         if round_data is None:
-            round_data = await RoundData.create()
-            await round_data.update(
-                category_id = category
-            ).apply()
+            round_data = await RoundData.create(category_id=category)
+            # await round_data.update(
+            #     category_id = category
+            # ).apply()
         return round_data
 
     @classmethod

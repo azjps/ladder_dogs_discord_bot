@@ -1,3 +1,8 @@
+import datetime
+from typing import Optional
+
+import pytz
+
 from bot.database import db
 
 
@@ -69,6 +74,21 @@ class PuzzleData(db.Model):
     def is_solved(self):
         return self.status == "solved" and self.solve_time is not None
 
+    @classmethod
+    async def query_notes(self):
+        notes = await PuzzleNotes.query.where(
+            PuzzleNotes.puzzle_id == self.id
+        ).gino.all()
+        return notes
+
+    @classmethod
+    async def commit_note(self, note_text: str, jump_url: Optional[str]):
+        added_time = datetime.datetime.now(tz=pytz.UTC)
+        return await PuzzleNotes.create(
+            puzzle_id=self.id,
+            text=note_text, jump_url=jump_url, added_time=added_time,
+        )
+
 
 class PuzzleNotes(db.Model):
     __tablename__ = "puzzle_notes"
@@ -77,5 +97,8 @@ class PuzzleNotes(db.Model):
     puzzle_id = db.Column(db.BIGINT,
                          db.ForeignKey("puzzle_data.id",
                                        onupdate="CASCADE", ondelete="CASCADE"))
+    # note_index = db.Column(db.Integer)
     text = db.Column(db.Text)
+    user = db.Column(db.Text)
+    jump_url = db.Column(db.Text)
     added_time = db.Column(db.DateTime(timezone=True))
