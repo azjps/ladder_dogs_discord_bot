@@ -84,7 +84,7 @@ Create a [discord application and bot](https://realpython.com/how-to-make-a-disc
 }
 ```
 
-Create a .env file with relevant database information, such as:
+Create a `.env` file with relevant database information, such as:
 ```bash
 DB_PORT=5432
 DB_DATABASE=postgres
@@ -97,7 +97,17 @@ https://gspread.readthedocs.io/en/latest/oauth2.html#enable-api-access), and sav
 
 Now you can run the bot by running the following in a shell: `docker compose up`
 
-The environment variable `$LADDER_SPOT_DATA_DIR` can be used to control the directory where guild settings and puzzle data are stored.
+To launch a postgres cli shell to see the state of the database:
+```
+sudo docker ps
+sudo docker exec -it ladder_dogs_discord_bot-db-1 psql -U postgres
+```
+
+To launch an interactive python shell with the same environment:
+```
+sudo docker-compose run bot sh
+pipenv run python
+```
 
 If you're interested in running the latest released version somewhere and don't want to build it yourself, I provide a docker image on dockerhub, that can be retrieved with `docker pull akbarthegreat/splat-storage-discord`
 

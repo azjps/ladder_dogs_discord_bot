@@ -84,6 +84,8 @@ class PuzzleData(db.Model):
     @classmethod
     async def commit_note(self, note_text: str, **kwargs):
         added_time = datetime.datetime.now(tz=pytz.UTC)
+        assert self.id >= 0
+        print("Adding note for", self, self.id)
         return await PuzzleNotes.create(
             puzzle_id=self.id,
             text=note_text,
@@ -98,7 +100,8 @@ class PuzzleNotes(db.Model):
     note_id = db.Column(db.BIGINT, primary_key=True, autoincrement=True)
     puzzle_id = db.Column(db.BIGINT,
                          db.ForeignKey("puzzle_data.id",
-                                       onupdate="CASCADE", ondelete="CASCADE"))
+                                       onupdate="CASCADE", ondelete="CASCADE"),
+                        nullable=False)
     # note_index = db.Column(db.Integer)
     text = db.Column(db.Text)
     user = db.Column(db.Text)
