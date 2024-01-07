@@ -86,7 +86,9 @@ class PuzzleManagement(BaseCog):
             raise GeneralAppError(f"Unable to contact other cogs -- perhaps the server is misconfigured?")
         await interaction.response.send_message(embed=channel_cog.build_channel_info_message(settings.discussion_channel, interaction.channel))
 
-    async def update_puzzle_attr_by_command(self, interaction, attr, value, message=None, reply=True):
+    async def update_puzzle_attr_by_command(self, interaction: discord.Interaction,
+                                            attr: str, value: Optional[str], message: Optional[str] = None,
+                                            reply: bool =True) -> Optional[PuzzleData]:
         """Common pattern where we want to update a single field in PuzzleData based on command"""
         puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
         if not puzzle_data:
@@ -109,7 +111,7 @@ class PuzzleManagement(BaseCog):
             await interaction.response.send_message(embed=embed)
         return puzzle_data
 
-    async def send_state(self, channel: discord.TextChannel, puzzle_data: PuzzleData, description=None):
+    async def send_state(self, interaction: discord.Interaction, puzzle_data: PuzzleData, description=None):
         """Send simple embed showing relevant links"""
         embed = discord.Embed(description=description)
         embed.add_field(name="Hunt URL", value=puzzle_data.hunt_url or "?")
@@ -118,7 +120,7 @@ class PuzzleManagement(BaseCog):
         embed.add_field(name="Status", value=puzzle_data.status or "?")
         embed.add_field(name="Type", value=puzzle_data.puzzle_type or "?")
         embed.add_field(name="Priority", value=puzzle_data.priority or "?")
-        await channel.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
     async def link(self, interaction: discord.Interaction, *, url: Optional[str]):
@@ -126,7 +128,7 @@ class PuzzleManagement(BaseCog):
         puzzle_data = await self.update_puzzle_attr_by_command(interaction, "hunt_url", url, reply=False)
         if puzzle_data:
             await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
+                interaction, puzzle_data, description=":white_check_mark: I've updated:" if url else None
             )
 
     @app_commands.command()
@@ -141,63 +143,78 @@ class PuzzleManagement(BaseCog):
         puzzle_data = await self.update_puzzle_attr_by_command(interaction, "google_sheet_id", file_id, reply=False)
         if puzzle_data:
             await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if url else None
+                interaction, puzzle_data, description=":white_check_mark: I've updated:" if url else None
             )
 
     @app_commands.command()
     async def note(self, interaction: discord.Interaction, *, note: Optional[str]):
         """*Show or add a note about the puzzle*"""
-        embed = discord.Embed(description="Notes disabled for the moment, they'll probably be back?'")
+        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(interaction)
+            return
+
+        message = "Showing notes left by users!"
+
+        notes = puzzle_data.query_notes()
+
+        if note:
+             new_note = puzzle_data.commit_note(note, jump_url=interaction.message.jump_url)
+             message = (
+                 f"Added a new note! Use `/erase_note {len(notes) + 1}` to remove the note if needed. "
+                 f"Check `/note` for the current list of notes."
+             )
+             notes.append(new_note)
+
+        if notes:
+            embed = discord.Embed(description=f"{message}")
+            embed.add_field(
+                name="Notes",
+                value="\n".join([
+                    f"{i+1}: {note_obj.text} - {note_obj.jump_url}" for i, note_obj in enumerate(notes)
+                ])
+            )
+        else:
+            embed = discord.Embed(description="No notes left yet, use `/note my note here` to leave a note")
         await interaction.response.send_message(embed=embed)
-#        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-#        if not puzzle_data:
-#            await self.send_not_puzzle_channel(interaction)
-#            return
-#
-#        message = "Showing notes left by users!"
-#        if note:
-#            PuzzleJsonDb.commit(puzzle_data)
-#            puzzle_data.notes.append(f"{note} - {interaction.message.jump_url}")
-#            PuzzleJsonDb.commit(puzzle_data)
-#            message = (
-#                f"Added a new note! Use `/erase_note {len(puzzle_data.notes)}` to remove the note if needed. "
-#                f"Check `/note` for the current list of notes."
-#            )
-#
-#        if puzzle_data.notes:
-#            embed = discord.Embed(description=f"{message}")
-#            embed.add_field(
-#                name="Notes",
-#                value="\n".join([f"{i+1}: {puzzle_data.notes[i]}" for i in range(len(puzzle_data.notes))])
-#            )
-#        else:
-#            embed = discord.Embed(description="No notes left yet, use `/note my note here` to leave a note")
-#        await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
     async def erase_note(self, interaction: discord.Interaction, note_index: int):
-        """*Remove a note by index*"""
-        embed = discord.Embed(description="Notes disabled for the moment, they'll probably be back?'")
+        """*Remove a note by index*
+
+        Warning:
+            As this operates on the index of the note in the notes list
+            of the puzzle, this is not safe wrt race conditions from
+            multiple erase_note messages.
+        """
+        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(interaction)
+            return
+
+        # NOTE: This is very race un-safe: if two people try
+        # to delete notes at the same time, the indices will
+        # have changed by the time of the second delete, which
+        # will cause a different note to get deleted.
+        # As this is not a common operation, for now will just
+        # leave as a unfortunate to-do.
+        notes = self.query_notes()
+
+        if 1 <= note_index <= len(notes):
+            note = notes[note_index]
+            description = f"Erased note {note_index}: `{note.text}` - {note.jump_url}"
+            await note.delete()
+        else:
+            description = f"Unable to find note {note_index}"
+
+        notes = self.query_notes()
+
+        embed = discord.Embed(description=description)
+        embed.add_field(
+            name="Notes",
+            value="\n".join([f"{i+1}, {puzzle_data.notes[i]}" for i in range(len(puzzle_data.notes))])
+        )
         await interaction.response.send_message(embed=embed)
-#        puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
-#        if not puzzle_data:
-#            await self.send_not_puzzle_channel(interaction)
-#            return
-#
-#        if 1 <= note_index <= len(puzzle_data.notes):
-#            note = puzzle_data.notes[note_index-1]
-#            del puzzle_data.notes[note_index - 1]
-#            PuzzleJsonDb.commit(puzzle_data)
-#            description = f"Erased note {note_index}: `{note}`"
-#        else:
-#            description = f"Unable to find note {note_index}"
-#
-#        embed = discord.Embed(description=description)
-#        embed.add_field(
-#            name="Notes",
-#            value="\n".join([f"{i+1}, {puzzle_data.notes[i]}" for i in range(len(puzzle_data.notes))])
-#        )
-#        await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
     async def status(self, interaction: discord.Interaction, *, status: Optional[str]):
@@ -205,7 +222,7 @@ class PuzzleManagement(BaseCog):
         puzzle_data = await self.update_puzzle_attr_by_command(interaction, "status", status, reply=False)
         if puzzle_data:
             await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if status else None
+                interaction, puzzle_data, description=":white_check_mark: I've updated:" if status else None
             )
 
     @app_commands.command()
@@ -214,7 +231,7 @@ class PuzzleManagement(BaseCog):
         puzzle_data = await self.update_puzzle_attr_by_command(interaction, "puzzle_type", puzzle_type, reply=False)
         if puzzle_data:
             await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if puzzle_type else None
+                interaction, puzzle_data, description=":white_check_mark: I've updated:" if puzzle_type else None
             )
 
     @app_commands.command()
@@ -227,7 +244,7 @@ class PuzzleManagement(BaseCog):
         puzzle_data = await self.update_puzzle_attr_by_command(interaction, "priority", priority, reply=False)
         if puzzle_data:
             await self.send_state(
-                interaction.channel, puzzle_data, description=":white_check_mark: I've updated:" if priority else None
+                interaction, puzzle_data, description=":white_check_mark: I've updated:" if priority else None
             )
 
     @app_commands.command()
