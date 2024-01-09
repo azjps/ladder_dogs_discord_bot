@@ -330,7 +330,7 @@ class PuzzleManagement(BaseCog):
         ).apply()
 
         settings = await database.query_guild(interaction.guild.id)
-        emoji = settings.discord_bot_emoji
+        emoji = settings.discord_bot_emoji or ""
         embed = discord.Embed(
             description=f"{emoji} :partying_face: Great work! Marked the solution as `{solution}`"
         )

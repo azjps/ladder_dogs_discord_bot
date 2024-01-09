@@ -394,7 +394,7 @@ class ChannelManagement(BaseCog):
                 value="""The following may be useful discord commands:
 • `/solve SOLUTION` will mark this puzzle as solved and archive this channel to #solved-puzzles
 • `/link <url>` will update the link to the puzzle on the hunt website
-• `/doc <url>` will update the Google Drive link
+• `/sheet <url>` will update the Google Drive link
 • `/info` will re-post this message
 • `/delete` should *only* be used if a channel was mistakenly created.
 • `/type crossword` will mark the type of the puzzle, for others to know

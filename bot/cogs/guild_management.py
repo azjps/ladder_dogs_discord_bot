@@ -14,6 +14,8 @@ class GuildManagement(BaseCog):
     def __init__(self, bot):
         self.bot = bot
 
+    # TODO: use choices for setting_key:
+    # https://stackoverflow.com/questions/72043793/discord-py-how-to-create-choice-with-slash-command
     @commands.has_permissions(manage_channels=True)
     @app_commands.command()
     async def show_settings(self, interaction: discord.Interaction):

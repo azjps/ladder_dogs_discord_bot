@@ -178,7 +178,9 @@ class GoogleSheets(BaseCog):
         )
         self.update_cell_row(cell_range, 3, "Nexus", nexus_url)
         resources_url = (
-            urls.docs_url(guild_settings.drive_resources_id)
+            urls.docs_url(hunt_settings.drive_resources_id)
+            if hunt_settings.drive_resources_id
+            else urls.docs_url(guild_settings.drive_resources_id)
             if guild_settings.drive_resources_id
             else ""
         )
