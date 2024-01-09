@@ -10,7 +10,7 @@ import pytz
 from bot.base_cog import BaseCog, GeneralAppError
 from bot.data.puzzle_db import PuzzleDb
 from bot import database
-from bot.database.models import PuzzleData, RoundData
+from bot.database.models import PuzzleData, RoundData, HuntSettings
 
 logger = logging.getLogger(__name__)
 
@@ -43,21 +43,24 @@ class ChannelManagement(BaseCog):
         puzzle: str,
         url: Optional[str],
     ):
-        """*Create new puzzle channels: /puzzle round-name: puzzle-name*
+        """*Create new puzzle channels: ``/puzzle round-name puzzle-name``*
 
         Can be posted in either a #general channel or the bot channel
         """
-        # settings = await database.query_guild(interaction.guild.id)
         if not hunt_round:
             category = interaction.channel.category
-            if category and category.name != "Text Channels":
+            if category and not category.name.upper().endswith("TEXT CHANNELS"):
                 if hunt_round is None:
                     hunt_round = category.name
                 if hunt_round != category.name:
                     raise ValueError(f"Unexpected round: {hunt_round}, expected: {category.name}")
-                return await self.create_puzzle_channel(interaction, hunt_round, puzzle, url)
+                return await self.create_puzzle_channel(
+                    interaction, hunt_round, puzzle, url, category_id=category.id
+                )
 
-        if not (await self.check_is_bot_channel(interaction)):
+        if await self._error_if_not_bot_channel(
+            interaction, "puzzle", message="or a round channel"
+        ):
             return
 
         if hunt_round is None:
@@ -74,10 +77,24 @@ class ChannelManagement(BaseCog):
         """*Create new puzzle round: /round round-name*"""
         await self.create_round(interaction, category_name, hunt_name)
 
+    async def _error_if_not_bot_channel(
+        self, interaction: discord.Interaction, command: str, message: Optional[str]
+    ) -> bool:
+        if not (await self.check_is_bot_channel(interaction)):
+            settings = await database.query_guild(interaction.guild.id)
+            error_message = (
+                f"Can only use /{command} command in channel: {settings.discord_bot_channel}"
+            )
+            if message:
+                error_message += f" {message}"
+            await interaction.response.send_message(error_message)
+            return True
+        return False
+
     @app_commands.command()
     async def hunt(self, interaction: discord.Interaction, *, hunt_url: str, hunt_name: str):
         """*Create a new hunt*"""
-        if not (await self.check_is_bot_channel(interaction)):
+        if await self._error_if_not_bot_channel(interaction, "hunt"):
             return
 
         settings = await database.query_hunt_settings_by_name(interaction.guild.id, hunt_name)
@@ -89,6 +106,24 @@ class ChannelManagement(BaseCog):
         if gsheet_cog is not None:
             # Create the drive folder and nexus sheet for this hunt
             await gsheet_cog.create_hunt_drive(interaction.guild.id, text_channel, settings)
+
+    @app_commands.command()
+    async def hunt_end(
+        self, interaction: discord.Interaction, *, hunt_name: str, is_ended: bool = True
+    ):
+        """End the hunt. Note that puzzle channel creation etc may no longer work afterwards"""
+        if await self._error_if_not_bot_channel(interaction, "hunt_end"):
+            return
+
+        settings = await database.query_hunt_settings_by_name(
+            interaction.guild.id, hunt_name, allow_create=False
+        )
+        if is_ended:
+            await settings.update(end_time=datetime.datetime.now(tz=pytz.UTC)).apply()
+            await interaction.response.send_message(f"Have ended hunt: {hunt_name}. Congrats!")
+        else:
+            await settings.update(end_time=None).apply()
+            await interaction.response.send_message(f"Have un-ended hunt: {hunt_name}")
 
     @app_commands.command()
     async def create_hunt_drive(self, interaction: discord.Interaction):
@@ -124,6 +159,15 @@ class ChannelManagement(BaseCog):
             from_category = 0
             if interaction.channel.category:
                 from_category = interaction.channel.category.id
+
+            if hunt_name is None:
+                # If there is only one active hunt, as would usually
+                # be the case, then assume round belongs to that hunt
+                # TODO: warn if there is not exactly one hunt?
+                active_hunts = await HuntSettings.get_active_hunts()
+                if len(active_hunts) == 1:
+                    hunt_name = active_hunts[0].hunt_name
+
             await RoundData.create_round(
                 guild_id=guild.id,
                 from_category=from_category,
@@ -134,7 +178,11 @@ class ChannelManagement(BaseCog):
 
         settings = await database.query_guild(interaction.guild.id)
         return await self.create_puzzle_channel(
-            interaction, category.name, settings.discussion_channel, None
+            interaction,
+            category.name,
+            settings.discussion_channel,
+            None,
+            category_id=category.id,
         )
 
     async def get_or_create_channel(
@@ -168,22 +216,36 @@ class ChannelManagement(BaseCog):
         return (channel, created)
 
     async def create_puzzle_channel(
-        self, interaction, round_name: str, puzzle_name: str, url: Optional[str]
+        self,
+        interaction,
+        round_name: str,
+        puzzle_name: str,
+        url: Optional[str],
+        category_id: int = -1,
     ):
         """Create new text channel for puzzle, and optionally a voice channel
 
         Save puzzle metadata to data_dir, send initial messages to channel, and
         create corresponding Google Sheet if GoogleSheets cog is set up.
         """
+        guild = interaction.guild
+        category_name = round_name
+        if category_id > 0:
+            category = discord.utils.get(guild.categories, id=category_id)
+        else:
+            # searching by category name is not safe across multiple hunts
+            # in case of round name collisions
+            category = discord.utils.get(guild.categories, name=category_name)
+        if category is None:
+            await interaction.response.send_message(
+                f"Round {category_name} not found, unable to create puzzle channel. "
+                f"May need to first create /round {category_name}"
+            )
+            return
+
         await interaction.response.send_message(
             f"Creating channel(s) for puzzle {puzzle_name}", ephemeral=True
         )
-        guild = interaction.guild
-        category_name = round_name
-        category = discord.utils.get(guild.categories, name=category_name)
-        if category is None:
-            raise ValueError(f"Round {category_name} not found")
-
         channel_name = self.clean_name(puzzle_name)
         text_channel, created_text = await self.get_or_create_channel(
             guild=guild,
@@ -193,8 +255,22 @@ class ChannelManagement(BaseCog):
             reason=self.PUZZLE_REASON,
         )
         guild_settings = await database.query_guild(guild.id)
+        round_settings = await RoundData.query_by_category(category.id)
+        if not round_settings:
+            await interaction.followup.send(
+                f"Round {category_name} not found, unable to create puzzle channel. "
+                f"May need to first create /round {category_name}"
+            )
+            return
+
         hunt_settings = await database.query_hunt_settings_by_round(guild.id, category.id)
-        round_settings = await database.query_round_data(guild.id, category.id)
+        if hunt_settings.end_time is not None:
+            await interaction.followup.send(
+                f"Round {category_name} belongs to hunt {hunt_settings.hunt_name} "
+                f"which already ended on {hunt_settings.end_time}"
+            )
+            return
+
         if created_text:
             if not url and hunt_settings.hunt_url:
                 # NOTE: this is a heuristic and may need to be updated!

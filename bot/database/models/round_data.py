@@ -19,6 +19,8 @@ class RoundData(db.Model):
     round_url = db.Column(db.Text)  # if there is a separate url scheme for round
     round_url_sep = db.Column(db.Text)  # if there is a different separater for round
 
+    __table_args__ = (db.UniqueConstraint(hunt_id, name, name="uq_round_data_hunt_id_name"),)
+
     @classmethod
     async def get_or_create(cls, category: int, **kwargs) -> "RoundData":
         """query round data, create if it does not exist"""
@@ -28,7 +30,7 @@ class RoundData(db.Model):
         return round_data
 
     @classmethod
-    async def get_hunt_from_round(cls, guild_id: int, round_channel: int):
+    async def get_hunt_from_round(cls, guild_id: int, round_channel: int) -> HuntSettings:
         round_data = await cls.get_or_create(round_channel)
         hunt = await HuntSettings.get(round_data.hunt_id)
         if hunt is None:
@@ -47,10 +49,19 @@ class RoundData(db.Model):
         return hunt.hunt_name
 
     @classmethod
-    async def query_by_category(cls, category: int):
+    async def query_by_category(cls, category: int, require_active=False) -> Optional["RoundData"]:
         round_data = await RoundData.query.where(
             (RoundData.category_id == category) | (RoundData.solved_category_id == category)
         ).gino.first()
+        if require_active and round_data:
+            hunt_data = await HuntSettings.query.where(
+                HuntSettings.id == round_data.hunt_id
+            ).gino.first()
+            if hunt_data:
+                if hunt_data.end_time:
+                    return None
+            else:
+                return None
         return round_data
 
     @classmethod

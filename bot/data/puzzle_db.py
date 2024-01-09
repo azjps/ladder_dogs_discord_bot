@@ -37,9 +37,10 @@ class PuzzleDb:
         return puzzle
 
     @classmethod
-    async def get_all(cls, guild_id) -> List[PuzzleData]:
+    async def get_all(cls, guild_id: int) -> List[PuzzleData]:
+        # TODO: need to also filter on hunt_name
         puzzle_datas = await PuzzleData.query.where(
-            (PuzzleData.guild_id == guild_id) & (PuzzleData.delete_time == None)
+            (PuzzleData.guild_id == guild_id) & (PuzzleData.delete_time.is_(None))
         ).gino.all()
         return cls.sort_by_round_start(puzzle_datas)
 

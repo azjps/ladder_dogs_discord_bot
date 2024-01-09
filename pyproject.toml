@@ -65,7 +65,7 @@ target-version = "py38"
 [tool.ruff.lint]
 select = ["E", "F", "B"]
 ignore = [
-    "E711",  # == None is fine for db queries
+    "E501",  # let ruff format handle it
 ]
 
 [tool.ruff.lint.per-file-ignores]

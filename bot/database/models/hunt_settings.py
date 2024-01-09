@@ -1,5 +1,8 @@
+import datetime
 import json
-from typing import Dict
+from typing import Dict, List
+
+import pytz
 
 from bot.database import db
 
@@ -19,7 +22,15 @@ class HuntSettings(db.Model):
     )  # If specified, a different url to use for rounds, defaults to hunt_url
     drive_hunt_folder_id = db.Column(db.Text)  # The directory for all of this hunt's spreadsheets
     drive_nexus_sheet_id = db.Column(db.Text)  # Refer to gsheet_nexus.py
-    # drive_resources_id = db.Column(db.Text)                         # Document with resources links, etc
+    drive_resources_id = db.Column(
+        db.Text
+    )  # Document with resources links, etc; can override GuildSettings.drive_resources_id
+    start_time = db.Column(db.DateTime(timezone=True))
+    end_time = db.Column(db.DateTime(timezone=True))  # If set, indicates hunt no longer active
+
+    __table_args__ = (
+        db.UniqueConstraint(guild_id, hunt_name, name="uq_hunt_settings_guild_id_hunt_name"),
+    )
 
     @classmethod
     async def get_or_create_by_name(cls, guild_id: int, hunt_name: str):
@@ -28,17 +39,24 @@ class HuntSettings(db.Model):
             (cls.guild_id == guild_id) & (cls.hunt_name == hunt_name)
         ).gino.first()
         if settings is None:
+            start_time = datetime.datetime.now(tz=pytz.UTC)
             settings = await cls.create(
                 guild_id=guild_id,
                 hunt_name=hunt_name,
+                start_time=start_time,
             )
         return settings
 
-    # I don't love managing this way, but I can't find anything in SQLAlchemy about introspecting columns after they're created.
-    def column_type(self, column_name):
-        if column_name in ["guild_id"]:
-            return int
-        return str
+    @classmethod
+    async def get_active_hunts(cls, guild_id: int) -> List["HuntSettings"]:
+        settings = await cls.query.where(
+            (cls.guild_id == guild_id) & (cls.end_time.is_(None))
+        ).gino.all()
+        return settings
+
+    @classmethod
+    def column_type(cls, column_name):
+        return getattr(cls, column_name).type.python_type
 
     @classmethod
     async def get_id_for_name(cls, guild_id: int, name: str):
@@ -67,7 +85,7 @@ class HuntSettings(db.Model):
                     "hunt_round_url",
                     "drive_hunt_folder_id",
                     "drive_nexus_sheet_id",
-                    # "drive_resources_id",
+                    "drive_resources_id",
                 )
             },
             indent=4,

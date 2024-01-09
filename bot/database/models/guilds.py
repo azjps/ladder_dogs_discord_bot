@@ -33,11 +33,9 @@ class GuildSettings(db.Model):
             guild = await cls.create(id=guild_id)
         return guild
 
-    # I don't love managing this way, but I can't find anything in SQLAlchemy about introspecting columns after they're created.
-    def column_type(self, column_name):
-        if column_name in ["id", "discord_use_voice_channels", "archive_delay"]:
-            return int
-        return str
+    @classmethod
+    def column_type(cls, column_name):
+        return getattr(cls, column_name).type.python_type
 
     async def set(self, values: Dict[str, str]):
         for key in values:

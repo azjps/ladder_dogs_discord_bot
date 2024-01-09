@@ -28,12 +28,18 @@ async def query_guild(guild_id: int):
     return await models.GuildSettings.get_or_create(guild_id)
 
 
-async def query_hunt_settings_by_name(guild_id: int, hunt_name: str):
+async def query_hunt_settings_by_name(guild_id: int, hunt_name: str, allow_create: bool = True):
     """query hunt settings, create if it does not exist"""
-    return await models.HuntSettings.get_or_create_by_name(guild_id, hunt_name)
+    if allow_create:
+        return await models.HuntSettings.get_or_create_by_name(guild_id, hunt_name)
+    else:
+        return models.HuntSettings.query.where(
+            (models.HuntSettings.guild_id == guild_id)
+            & (models.HuntSettings.hunt_name == hunt_name)
+        ).gino.first()
 
 
-async def query_hunt_settings_by_round(guild_id: int, round_channel: int):
+async def query_hunt_settings_by_round(guild_id: int, round_channel: int) -> models.HuntSettings:
     return await models.RoundData.get_hunt_from_round(guild_id, round_channel)
 
 
