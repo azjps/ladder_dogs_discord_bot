@@ -68,6 +68,25 @@ class HuntManagement(BaseCog):
                 f":exclamation: Unrecognized setting key: `{setting_key}`. Use `/show_hunt_settings` for more info."
             )
 
+    @app_commands.command()
+    async def hunt_end(
+        self, interaction: discord.Interaction, *, hunt_name: str, is_ended: bool = True
+    ):
+        """End the hunt. Note that puzzle channel creation etc may no longer work afterwards"""
+        if await self._error_if_not_bot_channel(interaction, "hunt_end"):
+            return
+
+        settings = await database.query_hunt_settings_by_name(
+            interaction.guild.id, hunt_name, allow_create=False
+        )
+        if is_ended:
+            await settings.update(end_time=datetime.datetime.now(tz=pytz.UTC)).apply()
+            await interaction.response.send_message(f"Have ended hunt: {hunt_name}. Congrats!")
+        else:
+            await settings.update(end_time=None).apply()
+            await interaction.response.send_message(f"Have un-ended hunt: {hunt_name}")
+
+
 
 async def setup(bot):
     await bot.add_cog(HuntManagement(bot))
