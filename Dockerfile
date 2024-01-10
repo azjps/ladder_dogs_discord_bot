@@ -1,4 +1,5 @@
-FROM python:3.12.1-alpine3.19
+FROM python:3.10.13-alpine3.19
+
 ENV PYTHONUNBUFFERED 1
 
 RUN apk add --no-cache \
