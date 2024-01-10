@@ -105,24 +105,6 @@ class ChannelManagement(BaseCog):
             await gsheet_cog.create_hunt_drive(interaction.guild.id, text_channel, settings)
 
     @app_commands.command()
-    async def hunt_end(
-        self, interaction: discord.Interaction, *, hunt_name: str, is_ended: bool = True
-    ):
-        """End the hunt. Note that puzzle channel creation etc may no longer work afterwards"""
-        if await self._error_if_not_bot_channel(interaction, "hunt_end"):
-            return
-
-        settings = await database.query_hunt_settings_by_name(
-            interaction.guild.id, hunt_name, allow_create=False
-        )
-        if is_ended:
-            await settings.update(end_time=datetime.datetime.now(tz=pytz.UTC)).apply()
-            await interaction.response.send_message(f"Have ended hunt: {hunt_name}. Congrats!")
-        else:
-            await settings.update(end_time=None).apply()
-            await interaction.response.send_message(f"Have un-ended hunt: {hunt_name}")
-
-    @app_commands.command()
     async def create_hunt_drive(self, interaction: discord.Interaction):
         hunt = await database.query_hunt_settings_by_round(
             interaction.guild.id, interaction.channel.category.id
