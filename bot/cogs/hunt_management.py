@@ -40,7 +40,7 @@ class HuntManagement(BaseCog):
     @commands.has_permissions(manage_channels=True)
     @app_commands.command()
     async def show_hunt_settings(self, interaction: discord.Interaction):
-        """*(admin) Show guild-level settings*"""
+        """*(admin) Show hunt-level settings*"""
         settings = await self._get_hunt_settings_from_channel(interaction)
         if not settings:
             return
