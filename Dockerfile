@@ -1,10 +1,12 @@
-FROM python:3.8.5-alpine
+FROM python:3.10.13-alpine3.19
 ENV PYTHONUNBUFFERED 1
 
 RUN apk add --no-cache \
     build-base \
+    cargo \
     postgresql-dev \
-    postgresql-libs
+    postgresql-libs \
+    rust
 
 RUN mkdir /code
 WORKDIR /code
