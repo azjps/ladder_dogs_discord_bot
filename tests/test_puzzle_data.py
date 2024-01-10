@@ -1,10 +1,9 @@
-import copy
 import datetime
 import json
 
-import pytest
 
 from bot.utils.puzzles_data import PuzzleData
+
 
 class TestPuzzleData:
     def dummy_data(self, name="dummy-puzzle", round_name="dummy-round", start_day=1):

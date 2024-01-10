@@ -5,8 +5,9 @@ default_config = {
     "discord_bot_token": "",
     "prefix": "!",
     "database": "postgresql://localhost/postgres",
-    "debug": False
+    "debug": False,
 }
+
 
 class Config:
     def __init__(self, filename="config.json"):

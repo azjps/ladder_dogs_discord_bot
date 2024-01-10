@@ -12,7 +12,7 @@ naming_convention = {
 db = Gino(naming_convention=naming_convention)
 
 # import models so Gino can register them
-import bot.database.models  # noqa
+import bot.database.models as models  # noqa
 
 
 async def setup():
@@ -27,18 +27,27 @@ async def query_guild(guild_id: int):
     """query guild, create if it does not exist"""
     return await models.GuildSettings.get_or_create(guild_id)
 
-async def query_hunt_settings_by_name(guild_id: int, hunt_name: str):
-    """query hunt settings, create if it does not exist"""
-    return await models.HuntSettings.get_or_create_by_name(guild_id, hunt_name)
 
-async def query_hunt_settings_by_round(guild_id: int, round_channel: int):
+async def query_hunt_settings_by_name(guild_id: int, hunt_name: str, allow_create: bool = True):
+    """query hunt settings, create if it does not exist"""
+    if allow_create:
+        return await models.HuntSettings.get_or_create_by_name(guild_id, hunt_name)
+    else:
+        return models.HuntSettings.query.where(
+            (models.HuntSettings.guild_id == guild_id)
+            & (models.HuntSettings.hunt_name == hunt_name)
+        ).gino.first()
+
+
+async def query_hunt_settings_by_round(guild_id: int, round_channel: int) -> models.HuntSettings:
     return await models.RoundData.get_hunt_from_round(guild_id, round_channel)
 
-async def query_puzzle_data(guild_id: int, channel_id: int):
+
+async def query_puzzle_data(guild_id: int, channel_id: int, **kwargs):
     """query puzzle data, create if it does not exist"""
-    return await models.PuzzleData.get_or_create(guild_id, channel_id)
+    return await models.PuzzleData.get_or_create(guild_id, channel_id, **kwargs)
+
 
 async def query_round_data(guild_id: int, category_id: int):
     """query round data, create if it does not exist"""
     return await models.RoundData.get_or_create(category_id)
-
