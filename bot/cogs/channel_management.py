@@ -157,6 +157,7 @@ class ChannelManagement(BaseCog):
             if interaction.channel.category:
                 from_category = interaction.channel.category.id
 
+            hunt_id = -1
             if hunt_name is None:
                 # If there is only one active hunt, as would usually
                 # be the case, then assume round belongs to that hunt
@@ -164,14 +165,19 @@ class ChannelManagement(BaseCog):
                 active_hunts = await HuntSettings.get_active_hunts(guild.id)
                 if len(active_hunts) == 1:
                     hunt_name = active_hunts[0].hunt_name
+                    hunt_id = active_hunts[0].hunt_id
+                else:
+                    logger.warning(f"Multiple active hunts detected when creating round: {category_name}")
 
-            await RoundData.create_round(
+            round = await RoundData.create_round(
                 guild_id=guild.id,
                 from_category=from_category,
                 category=category.id,
                 name=category_name,
                 hunt=hunt_name,
+                hunt_id=hunt_id,
             )
+            logger.info(f"Committed new round pk:{round.id} hunt:{round.hunt_id} category_id:{round.category_id}")
 
         settings = await database.query_guild(interaction.guild.id)
         return await self.create_puzzle_channel(
@@ -255,7 +261,7 @@ class ChannelManagement(BaseCog):
         round_settings = await RoundData.query_by_category(category.id)
         if not round_settings:
             await interaction.followup.send(
-                f"Round {category_name} not found, unable to create puzzle channel. "
+                f"Round {category_name} id:{category_id} not found in database, unable to create puzzle channel. "
                 f"May need to first create /round {category_name}"
             )
             return

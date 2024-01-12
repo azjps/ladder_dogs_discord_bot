@@ -80,14 +80,15 @@ class RoundData(db.Model):
         category: int,
         name: Optional[str],
         hunt: Optional[str],
+        hunt_id: int = -1,
     ):
-        hunt_id = 0
-        if hunt is None:
-            hunt_id = await cls.get_hunt_from_category(guild_id, from_category)
-        else:
-            hunt_id = await HuntSettings.get_id_for_name(guild_id, hunt)
-            if hunt_id is None:
-                raise HuntNotFoundError(f"Hunt {hunt} not found in database")
+        if hunt_id < 0:
+            if hunt is None:
+                hunt_id = await cls.get_hunt_from_category(guild_id, from_category)
+            else:
+                hunt_id = await HuntSettings.get_id_for_name(guild_id, hunt)
+                if hunt_id is None:
+                    raise HuntNotFoundError(f"Hunt {hunt} not found in database")
         return await cls.get_or_create(
             category=category,
             hunt_id=hunt_id,
