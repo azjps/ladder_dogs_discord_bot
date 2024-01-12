@@ -78,7 +78,7 @@ class ChannelManagement(BaseCog):
         await self.create_round(interaction, category_name, hunt_name)
 
     async def _error_if_not_bot_channel(
-        self, interaction: discord.Interaction, command: str, message: Optional[str]
+        self, interaction: discord.Interaction, command: str, message: Optional[str] = None
     ) -> bool:
         if not (await self.check_is_bot_channel(interaction)):
             settings = await database.query_guild(interaction.guild.id)
