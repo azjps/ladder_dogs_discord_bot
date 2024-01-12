@@ -164,7 +164,7 @@ class ChannelManagement(BaseCog):
                 # If there is only one active hunt, as would usually
                 # be the case, then assume round belongs to that hunt
                 # TODO: warn if there is not exactly one hunt?
-                active_hunts = await HuntSettings.get_active_hunts()
+                active_hunts = await HuntSettings.get_active_hunts(guild.id)
                 if len(active_hunts) == 1:
                     hunt_name = active_hunts[0].hunt_name
 

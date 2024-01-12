@@ -22,7 +22,7 @@ class HuntManagement(BaseCog):
         guild_id = interaction.guild.id
         guild_settings = await database.query_guild(guild_id)
         if interaction.channel.name == guild_settings.discord_bot_channel:
-            active_hunts = await HuntSettings.get_active_hunts()
+            active_hunts = await HuntSettings.get_active_hunts(guild_id)
             if len(active_hunts) == 1:
                 settings = active_hunts[0]
             else:
