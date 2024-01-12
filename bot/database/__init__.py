@@ -33,7 +33,7 @@ async def query_hunt_settings_by_name(guild_id: int, hunt_name: str, allow_creat
     if allow_create:
         return await models.HuntSettings.get_or_create_by_name(guild_id, hunt_name)
     else:
-        return models.HuntSettings.query.where(
+        return await models.HuntSettings.query.where(
             (models.HuntSettings.guild_id == guild_id)
             & (models.HuntSettings.hunt_name == hunt_name)
         ).gino.first()
