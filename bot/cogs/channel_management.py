@@ -50,10 +50,7 @@ class ChannelManagement(BaseCog):
         if not hunt_round:
             category = interaction.channel.category
             if category and not category.name.upper().endswith("TEXT CHANNELS"):
-                if hunt_round is None:
-                    hunt_round = category.name
-                if hunt_round != category.name:
-                    raise ValueError(f"Unexpected round: {hunt_round}, expected: {category.name}")
+                hunt_round = category.name
                 return await self.create_puzzle_channel(
                     interaction, hunt_round, puzzle, url, category_id=category.id
                 )
@@ -238,7 +235,7 @@ class ChannelManagement(BaseCog):
             category = discord.utils.get(guild.categories, name=category_name)
         if category is None:
             await interaction.response.send_message(
-                f"Round {category_name} not found, unable to create puzzle channel. "
+                f"Round {category_name} id:{category_id} not found, unable to create puzzle channel. "
                 f"May need to first create /round {category_name}"
             )
             return
