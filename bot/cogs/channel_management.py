@@ -146,7 +146,9 @@ class ChannelManagement(BaseCog):
 
         guild = interaction.guild
         category = discord.utils.get(guild.categories, name=category_name)
-        if not category:
+        if category:
+            logger.info(f"Round channel already exists: {category.name} {category.id}")
+        else:
             logger.info(f"Creating a new channel category for round: {category_name}")
             # Normally place this category as the two from the end, unless it's the only channel or the second channel, then place it at the end.
             new_position = len(guild.categories) - 2
@@ -165,7 +167,7 @@ class ChannelManagement(BaseCog):
                 active_hunts = await HuntSettings.get_active_hunts(guild.id)
                 if len(active_hunts) == 1:
                     hunt_name = active_hunts[0].hunt_name
-                    hunt_id = active_hunts[0].hunt_id
+                    hunt_id = active_hunts[0].id
                 else:
                     logger.warning(f"Multiple active hunts detected when creating round: {category_name}")
 
