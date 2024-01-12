@@ -74,20 +74,6 @@ class ChannelManagement(BaseCog):
         """*Create new puzzle round: /round round-name*"""
         await self.create_round(interaction, category_name, hunt_name)
 
-    async def _error_if_not_bot_channel(
-        self, interaction: discord.Interaction, command: str, message: Optional[str] = None
-    ) -> bool:
-        if not (await self.check_is_bot_channel(interaction)):
-            settings = await database.query_guild(interaction.guild.id)
-            error_message = (
-                f"Can only use /{command} command in channel: {settings.discord_bot_channel}"
-            )
-            if message:
-                error_message += f" {message}"
-            await interaction.response.send_message(error_message)
-            return True
-        return False
-
     @app_commands.command()
     async def hunt(self, interaction: discord.Interaction, *, hunt_url: str, hunt_name: str):
         """*Create a new hunt*"""

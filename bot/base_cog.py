@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+import discord
 from discord.ext import commands
 
 from bot import database
@@ -69,6 +70,20 @@ class BaseCog(commands.Cog):
                 f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}"
             )
             return None
+
+    async def _error_if_not_bot_channel(
+        self, interaction: discord.Interaction, command: str, message: Optional[str] = None
+    ) -> bool:
+        if not (await self.check_is_bot_channel(interaction)):
+            settings = await database.query_guild(interaction.guild.id)
+            error_message = (
+                f"Can only use /{command} command in channel: {settings.discord_bot_channel}"
+            )
+            if message:
+                error_message += f" {message}"
+            await interaction.response.send_message(error_message)
+            return True
+        return False
 
 
 class GeneralAppError(RuntimeError):
