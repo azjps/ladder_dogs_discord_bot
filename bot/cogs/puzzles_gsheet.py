@@ -217,16 +217,16 @@ class GoogleSheets(BaseCog):
         for hunt in hunts:
             if hunt.drive_nexus_sheet_id:
                 rounds = await RoundData.rounds_in_hunt(hunt)
+                puzzles = []
                 for round_data in rounds:
-                    puzzles = await PuzzleData.puzzles_in_round(round_data.category_id)
-                    if puzzles:
-                        await update_nexus(
-                            agcm=self.agcm,
-                            file_id=hunt.drive_nexus_sheet_id,
-                            puzzles=puzzles,
-                            hunt_name=hunt.hunt_name,
-                            round_name=round_data.name,
-                        )
+                    puzzles.extend(await PuzzleData.puzzles_in_round(round_data.category_id))
+                if puzzles:
+                    await update_nexus(
+                        agcm=self.agcm,
+                        file_id=hunt.drive_nexus_sheet_id,
+                        puzzles=puzzles,
+                        hunt_name=hunt.hunt_name,
+                    )
 
     @refresh_nexus.before_loop
     async def before_refreshing_nexus(self):

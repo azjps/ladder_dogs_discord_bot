@@ -35,7 +35,6 @@ async def update_nexus(
     file_id: str,
     puzzles: List[PuzzleData],
     hunt_name: str,
-    round_name: str,
 ):
     # Always authorize first.
     # If you have a long-running program call authorize() repeatedly.
@@ -65,5 +64,5 @@ async def update_nexus(
             cell_index += 1
     await zero_ws.update_cells(cell_range)
     logger.info(
-        f"Finished updating {hunt_name}/{round_name} nexus spreadsheet with {update_count} puzzles"
+        f"Finished updating {hunt_name} nexus spreadsheet with {update_count} puzzles"
     )
