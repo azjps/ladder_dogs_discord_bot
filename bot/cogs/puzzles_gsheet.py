@@ -87,7 +87,7 @@ class GoogleSheets(BaseCog):
                 description=f"{emoji} I've created a spreadsheet for you at {sheet_url}. "
                 f"Check out the `Quick Links` tab for more info! "
                 # NOTE: This next sentence might be better elsewhere, for now easy enough to add message here.
-                f"I've assumed the puzzle page is {puzzle_url}, use `!link` to update if needed."
+                f"I've assumed the puzzle page is {puzzle_url}, use `/link` to update if needed."
             )
             await text_channel.send(embed=embed)
 
