@@ -115,6 +115,8 @@ To launch a postgres cli shell to see the state of the database:
 ```bash
 sudo docker ps
 sudo docker exec -it ladder_dogs_discord_bot-db-1 psql -U postgres
+# Dump contents of database to file
+sudo docker exec -it ladder_dogs_discord_bot-db-1 pg_dump -U postgres > ~/pg_dump.$(date +'%Y%m%d').sql
 ```
 
 To launch an interactive python shell with the same environment:

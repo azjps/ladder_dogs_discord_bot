@@ -137,3 +137,5 @@ config.json
 *_secrets.json
 /.vs
 
+# local data files
+local/
