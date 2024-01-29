@@ -14,7 +14,8 @@ WORKDIR /code
 RUN pip install pipenv
 
 COPY Pipfile Pipfile
-RUN pipenv install
+COPY Pipfile.lock Pipfile.lock
+RUN pipenv install --system
 
 COPY ./docker_entrypoint.sh docker_entrypoint.sh
 COPY ./alembic.ini alembic.ini
