@@ -1,5 +1,5 @@
 #!/bin/sh
 
-pipenv run alembic upgrade head && \
-pipenv run python run.py
+alembic upgrade head && \
+python run.py
 
