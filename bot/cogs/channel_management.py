@@ -298,6 +298,7 @@ class ChannelManagement(BaseCog):
             puzzle_data = await self.get_puzzle_data_from_channel(text_channel)
 
         created_voice = False
+        voice_channel = None
         if guild_settings.discord_use_voice_channels:
             voice_channel, created_voice = await self.get_or_create_channel(
                 guild=guild,
