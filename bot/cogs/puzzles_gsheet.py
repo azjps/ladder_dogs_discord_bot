@@ -5,8 +5,10 @@ This is a separate cog so that Google Drive integration
 can be easily disabled; simply omit this file.
 """
 
+import datetime
 import logging
 import string
+import pytz
 
 import discord
 from discord.ext import tasks
@@ -29,6 +31,10 @@ class GoogleSheets(BaseCog):
 
     def __init__(self, bot):
         self.bot = bot
+        # If a given hunt ended over 90 days ago, we only update it once per day, at 23:59 GMT
+        self.stale_hunt_days = 90
+        self.stale_hunt_update_hour = 23
+        self.stale_hunt_update_minute = 59
 
     def begin_loops(self):
         logger.info("Beginning loops")
@@ -214,8 +220,13 @@ class GoogleSheets(BaseCog):
     async def refresh_nexus(self):
         """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
         hunts = await HuntSettings.query.gino.all()
+        now = datetime.datetime.now(tz=pytz.UTC)
         for hunt in hunts:
             if hunt.drive_nexus_sheet_id:
+                # If the hunt ended over <n> days ago, only update it once per day, at hh:mm GMT
+                if hunt.end_time and now - hunt.end_time > datetime.timedelta(days=self.stale_hunt_days):
+                    if now.hour!=self.stale_hunt_update_hour or now.minute!=self.stale_hunt_update_minute:
+                        continue
                 rounds = await RoundData.rounds_in_hunt(hunt)
                 puzzles = []
                 for round_data in rounds:
