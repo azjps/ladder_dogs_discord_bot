@@ -358,7 +358,7 @@ class PuzzleManagement(BaseCog):
         await puzzle_data.update(status="unsolved", solution="", solve_time=None).apply()
 
         settings = await database.query_guild(interaction.guild.id)
-        emoji = settings.discord_bot_emoji
+        emoji = settings.discord_bot_emoji or ""
         embed = discord.Embed(
             description=f"{emoji} Alright, I've unmarked {prev_solution} as the solution. "
             "You'll get'em next time!"

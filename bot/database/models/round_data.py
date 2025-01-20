@@ -31,6 +31,9 @@ class RoundData(db.Model):
 
     @classmethod
     async def get_hunt_from_round(cls, guild_id: int, round_channel: int) -> HuntSettings:
+        # TODO: this should never create the db entry, the hunt id etc
+        # is not passed here so the created database entry will not make sense
+        # anyway, and will raise an error!
         round_data = await cls.get_or_create(round_channel)
         hunt = await HuntSettings.get(round_data.hunt_id)
         if hunt is None:

@@ -23,6 +23,11 @@ class HuntManagement(BaseCog):
     ) -> Optional[HuntSettings]:
         guild_id = interaction.guild.id
         guild_settings = await database.query_guild(guild_id)
+        if not guild_settings.guild_name:
+            await interaction.response.send_message(
+                f"Hello! The guild name and other settings have not been set yet, "
+                "please set these via `/update_setting` and `/show_settings`."
+            )
         if interaction.channel.name == guild_settings.discord_bot_channel:
             active_hunts = await HuntSettings.get_active_hunts(guild_id)
             if len(active_hunts) == 1:

@@ -400,7 +400,7 @@ class ChannelManagement(BaseCog):
         logger.info(f"Scheduling deletion for puzzle: {puzzle_data.name}")
 
         settings = await database.query_guild(interaction.guild.id)
-        emoji = settings.discord_bot_emoji
+        emoji = settings.discord_bot_emoji or ""
         embed = discord.Embed(
             description=f"{emoji} :recycle: Okay {interaction.user.mention}, I will permanently delete this channel in ~5 minutes."
         )
@@ -442,7 +442,7 @@ class ChannelManagement(BaseCog):
             logger.info(f"Un-scheduling deletion for puzzle: {puzzle_data.name}")
 
             settings = await database.query_guild(interaction.guild.id)
-            emoji = settings.discord_bot_emoji
+            emoji = settings.discord_bot_emoji or ""
             await interaction.response.send_message(
                 f"{emoji} Noted, will no longer be deleting this channel."
             )
