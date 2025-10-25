@@ -30,15 +30,13 @@ class GoogleSheets(BaseCog):
     agcm = get_manager()
 
     def __init__(self, bot):
-        self.bot = bot
-        # If a given hunt ended over 90 days ago, we only update it once per day, at 23:59 GMT
         self.stale_hunt_days = 90
-        self.stale_hunt_update_hour = 23
-        self.stale_hunt_update_minute = 59
+        self.bot = bot
 
     def begin_loops(self):
         logger.info("Beginning loops")
         self.refresh_nexus.start()
+        self.refresh_stale_nexus.start()
 
     def cap_name(self, name):
         """Capitalize name for easy comprehension"""
@@ -175,7 +173,10 @@ class GoogleSheets(BaseCog):
 
         self.update_cell_row(cell_range, 1, "Hunt URL", puzzle.hunt_url)
         self.update_cell_row(
-            cell_range, 2, "Drive folder", urls.drive_folder_url(puzzle.google_folder_id)
+            cell_range,
+            2,
+            "Drive folder",
+            urls.drive_folder_url(puzzle.google_folder_id),
         )
         nexus_url = (
             urls.spreadsheet_url(hunt_settings.drive_nexus_sheet_id)
@@ -186,9 +187,11 @@ class GoogleSheets(BaseCog):
         resources_url = (
             urls.docs_url(hunt_settings.drive_resources_id)
             if hunt_settings.drive_resources_id
-            else urls.docs_url(guild_settings.drive_resources_id)
-            if guild_settings.drive_resources_id
-            else ""
+            else (
+                urls.docs_url(guild_settings.drive_resources_id)
+                if guild_settings.drive_resources_id
+                else ""
+            )
         )
         self.update_cell_row(cell_range, 4, "Resources", resources_url)
         self.update_cell_row(cell_range, 5, "Discord channel mention", puzzle.channel_mention)
@@ -216,33 +219,48 @@ class GoogleSheets(BaseCog):
             return None
         return await rename_file(puzzle.google_sheet_id, name_lambda=archive_puzzle_name)
 
+    @tasks.loop(hours=24)
+    async def refresh_stale_nexus(self):
+        # This loop will run every 24 hours and updates hunts that ended a long time ago. (stale_hunt_days ago)
+        hunts = await HuntSettings.query.gino.all()
+        now = datetime.datetime.now(tz=pytz.UTC)
+        for hunt in hunts:
+            if self.hunt_is_stale(hunt, now):
+                await self.update_nexus_sheet(hunt)
+
     @tasks.loop(seconds=60.0)
     async def refresh_nexus(self):
         """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
         hunts = await HuntSettings.query.gino.all()
         now = datetime.datetime.now(tz=pytz.UTC)
         for hunt in hunts:
-            if hunt.drive_nexus_sheet_id:
-                # If the hunt ended over <n> days ago, only update it once per day, at hh:mm GMT
-                if hunt.end_time and now - hunt.end_time > datetime.timedelta(days=self.stale_hunt_days):
-                    if now.hour!=self.stale_hunt_update_hour or now.minute!=self.stale_hunt_update_minute:
-                        continue
-                rounds = await RoundData.rounds_in_hunt(hunt)
-                puzzles = []
-                for round_data in rounds:
-                    puzzles.extend(await PuzzleData.puzzles_in_round(round_data.category_id))
-                if puzzles:
-                    await update_nexus(
-                        agcm=self.agcm,
-                        file_id=hunt.drive_nexus_sheet_id,
-                        puzzles=puzzles,
-                        hunt_name=hunt.hunt_name,
-                    )
+            if not self.hunt_is_stale(hunt, now):
+                await self.update_nexus_sheet(hunt)
 
     @refresh_nexus.before_loop
     async def before_refreshing_nexus(self):
         await self.bot.wait_until_ready()
         logger.info("Ready to start updating nexus spreadsheet")
+
+    async def update_nexus_sheet(self, hunt):
+        if hunt.drive_nexus_sheet_id:
+            rounds = await RoundData.rounds_in_hunt(hunt)
+            puzzles = []
+            for round_data in rounds:
+                puzzles.extend(await PuzzleData.puzzles_in_round(round_data.category_id))
+            if puzzles:
+                await update_nexus(
+                    agcm=self.agcm,
+                    file_id=hunt.drive_nexus_sheet_id,
+                    puzzles=puzzles,
+                    hunt_name=hunt.hunt_name,
+                )
+
+    def hunt_is_stale(self, hunt, now=None):
+        """Returns True if the hunt is stale, False otherwise."""
+        if now is None:
+            now = datetime.datetime.now(tz=pytz.UTC)
+        return hunt.end_time and now - hunt.end_time > datetime.timedelta(days=self.stale_hunt_days)
 
 
 async def setup(bot):
