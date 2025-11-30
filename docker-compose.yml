@@ -1,13 +1,12 @@
-version: '3'
 volumes:
-  postgres_volume:
+  postgres_vol:
 services:
   db:
-    image: postgres
+    image: postgres:18
     env_file:
-      .env
+      - .env
     volumes:
-      - postgres_volume:/var/lib/postgresql/data/
+      - postgres_vol:/var/lib/postgresql/
     ports:
       - "5432:5432"
     environment:
@@ -15,10 +14,15 @@ services:
   bot:
     build: .
     volumes:
-      - .:/code
+      - ./google_secrets.json:/code/google_secrets.json
+      - ./config.json:/code/config.json
     depends_on:
       - db
-    ports:
-      - "80:80"
     environment:
       - DB_DSN=postgresql://$DB_USER:$DB_PASSWORD@db:$DB_PORT/$DB_DATABASE
+    develop:
+      watch:
+        - path: ./bot
+          ignore:
+            - __pycache__
+          action: rebuild
