@@ -1,0 +1,95 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install pipenv
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipenv
+    
+    - name: Install dependencies
+      run: |
+        pipenv install --dev
+    
+    - name: Run tests
+      run: |
+        # Add the project root to Python path so imports work
+        export PYTHONPATH="${PYTHONPATH}:."
+        pipenv run pytest tests/ -v
+    
+    - name: Run linting
+      run: |
+        pipenv run ruff check ./
+
+  build-docker:
+    needs: test
+    if: github.ref == 'refs/heads/splat-release'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Get date information
+      id: date
+      run: |
+        # Get current year (2-digit), month (2-digit) and day (2-digit)
+        YEAR=$(date +%y)
+        MONTH=$(date +%m)
+        DAY=$(date +%d)
+        echo "year=$YEAR" >> $GITHUB_OUTPUT
+        echo "month=$MONTH" >> $GITHUB_OUTPUT
+        echo "day=$DAY" >> $GITHUB_OUTPUT
+    
+    - name: Create tag
+      id: tag
+      run: |
+        TAG="${{ steps.date.outputs.year }}.${{ steps.date.outputs.month }}.${{ steps.date.outputs.day }}"
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+    - name: Format repo slug
+      id: repo_slug
+      run: |
+        REPO=${GITHUB_REPOSITORY,,}
+        echo "repo=$REPO" >> $GITHUB_OUTPUT
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64
+        push: true
+        tags: |
+          ghcr.io/${{ steps.repo_slug.outputs.repo }}:latest
+          ghcr.io/${{ steps.repo_slug.outputs.repo }}:${{ steps.tag.outputs.tag }}
+        labels: |
+          org.opencontainers.image.title=Splat Storage Bot
+          org.opencontainers.image.description=Discord bot for the *Storage team
+          org.opencontainers.image.version=${{ steps.tag.outputs.tag }}

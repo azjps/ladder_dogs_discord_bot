@@ -125,7 +125,7 @@ sudo docker-compose run bot sh
 pipenv run python
 ```
 
-If you're interested in running the latest released version somewhere and don't want to build it yourself, @AkbarTheGreat has a docker image on dockerhub for Splat's latest bot release, that can be retrieved with `docker pull akbarthegreat/splat-storage-discord`
+If you're interested in running the latest released version somewhere and don't want to build it yourself, @AkbarTheGreat has a docker image on github for Splat's latest bot release, that can be retrieved with `docker pull ghcr.io/akbarthegreat/splat_storage_discord_bot:latest`
 
 ## Tests
 
