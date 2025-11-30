@@ -129,7 +129,6 @@ dmypy.json
 .pyre/
 
 # vscode
-.vscode/*
 *.code-workspace
 
 # TEMPLATE END
