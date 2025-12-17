@@ -365,6 +365,18 @@ class PuzzleManagement(BaseCog):
         )
         await interaction.response.send_message(embed=embed)
 
+    @app_commands.command()
+    async def sticky_first_message(self, interaction: discord.Interaction, enabled: bool):
+        """*Enable or disable sticky first message for this guild*"""
+        if not (await self.check_is_bot_channel(interaction)):
+            return
+
+        settings = await database.query_guild(interaction.guild.id)
+        await settings.update(sticky_first_message=enabled).apply()
+        await interaction.response.send_message(
+            f":white_check_mark: Sticky first message is now {'enabled' if enabled else 'disabled'} for this guild"
+        )
+
 
 async def setup(bot):
     await bot.add_cog(PuzzleManagement(bot))
