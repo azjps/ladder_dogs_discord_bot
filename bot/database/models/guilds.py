@@ -24,6 +24,7 @@ class GuildSettings(db.Model):
         db.Text
     )  # Document that is copied to create all puzzle sheets
     archive_delay = db.Column(db.Integer, default=300)  # Delay for items to be archived, in seconds
+    sticky_first_message = db.Column(db.BIGINT, default=False)  # Whether to pin the first message and edit it when sheet is created
 
     @classmethod
     async def get_or_create(cls, guild_id: int) -> "GuildSettings":
@@ -59,6 +60,7 @@ class GuildSettings(db.Model):
                  "drive_resources_id": "{self.drive_resources_id}"
                  "drive_starter_sheet_id": "{self.drive_starter_sheet_id}"
                  "archive_delay": "{self.archive_delay}"
+                 "sticky_first_message": "{self.sticky_first_message}"
                }}
         """
         ).strip()

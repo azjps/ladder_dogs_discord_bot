@@ -93,7 +93,25 @@ class GoogleSheets(BaseCog):
                 # NOTE: This next sentence might be better elsewhere, for now easy enough to add message here.
                 f"I've assumed the puzzle page is {puzzle_url}, use `/link` to update if needed."
             )
-            await text_channel.send(embed=embed)
+            
+            # Check if we should edit the first message instead of sending a new one
+            if guild_settings.sticky_first_message:
+                # Get the first message in the channel to edit it instead of sending a new message
+                async for message in text_channel.history(limit=1):
+                    if message.author == self.bot.user:
+                        # Edit the first bot message instead of sending a new one
+                        # Append the new embed content after the existing message text
+                        new_content = message.embeds[0]
+                        new_content.add_field(name="Spreadsheet", value=embed.description)
+                        await message.edit(embed=new_content)
+                        await message.pin()
+                        break
+                else:
+                    # If no bot message found, send a new message (fallback)
+                    await text_channel.send(embed=embed)
+            else:
+                # Default behavior - send a new message
+                await text_channel.send(embed=embed)
 
             # add some helpful links
             await self.add_quick_links_worksheet(spreadsheet, puzzle, guild_settings, hunt_settings)
