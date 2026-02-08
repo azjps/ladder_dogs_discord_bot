@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Base image contains most everything needed to run the server
+# Base image contains the core dependencies for running a server
 #-------------------------------------------------------------------------------
 FROM python:3.10.13-alpine3.19 as base
 ENV PYTHONUNBUFFERED 1
@@ -17,12 +17,6 @@ RUN pip install pipenv
 COPY Pipfile Pipfile
 COPY Pipfile.lock Pipfile.lock
 
-COPY ./docker_entrypoint.sh docker_entrypoint.sh
-COPY ./alembic.ini alembic.ini
-COPY ./run.py run.py
-COPY ./alembic alembic
-COPY ./bot bot
-
 #-------------------------------------------------------------------------------
 # Devtools contains linters or autoformatters which aren't needed in production
 #-------------------------------------------------------------------------------
@@ -33,9 +27,15 @@ RUN pipenv install --system --dev
 CMD "echo No default command"
 
 #-------------------------------------------------------------------------------
-# The server image installs locked dependencies, then runs the bot.
+# The server image installs the code, locked dependencies, then runs the bot.
 #-------------------------------------------------------------------------------
 FROM base as server 
+
+COPY ./docker_entrypoint.sh docker_entrypoint.sh
+COPY ./alembic.ini alembic.ini
+COPY ./run.py run.py
+COPY ./alembic alembic
+COPY ./bot bot
 
 RUN pipenv install --system
 
