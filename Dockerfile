@@ -22,6 +22,9 @@ COPY Pipfile.lock Pipfile.lock
 #-------------------------------------------------------------------------------
 FROM base AS devtools
 
+RUN apk add --no-cache \
+    git
+
 RUN pipenv install --system --dev
 
 CMD ["/bin/echo", "No default command"]

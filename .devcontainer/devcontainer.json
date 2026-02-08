@@ -1,0 +1,31 @@
+{
+   "name": "Dev Container",
+   "dockerFile": "../Dockerfile",
+   "build": {
+      "target": "devtools"
+   },
+   "runArgs": [
+      "--network=host"
+   ],
+   "customizations": {
+      "vscode": {
+         "settings": {
+            "python.defaultInterpreterPath": "/usr/local/bin/python",
+            "python.testing.pytestArgs": [
+               "tests"
+            ],
+            "python.testing.unittestEnabled": false,
+            "python.testing.pytestEnabled": true
+         },
+         "extensions": [
+            "ms-python.python",
+            "ms-python.pylance",
+            "ms-python.vscode-pylance",
+            "ms-python.flake8",
+            "ms-python.black-formatter",
+            "ms-python.isort"
+         ]
+      }
+   },
+   "remoteUser": "root"
+}
