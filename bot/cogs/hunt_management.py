@@ -25,7 +25,7 @@ class HuntManagement(BaseCog):
         guild_settings = await database.query_guild(guild_id)
         if not guild_settings.guild_name:
             await interaction.response.send_message(
-                f"Hello! The guild name and other settings have not been set yet, "
+                "Hello! The guild name and other settings have not been set yet, "
                 "please set these via `/update_setting` and `/show_settings`."
             )
         if interaction.channel.name == guild_settings.discord_bot_channel:
