@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import asyncio
 import datetime
 import logging
 from typing import List, Optional
@@ -690,6 +693,118 @@ class ChannelManagement(BaseCog):
     async def before_archiving(self):
         await self.bot.wait_until_ready()
         logger.info("Ready to start archiving solved puzzles")
+
+    @commands.has_permissions(manage_channels=True)
+    @app_commands.command()
+    async def archive_hunt_channels(
+        self, interaction: discord.Interaction, *,
+        archive_channel_id: str,  # channel id of archive channel
+        archive_hunt: Optional[str],
+    ):
+        """Creates an archive channel of all messages from relevant text channels
+
+        This copies non-bot messages into an archive channel to preserve
+        messages while allowing the channels for old hunts to be cleaned up.
+        """
+        try:
+            archive_channel_id: int = int(archive_channel_id)
+        except Exception as exc:
+            await interaction.response.send_message(f"Failed to parse archive_channel_id integer: {exc!r}")
+            return
+
+        channels: list[int] = []
+        if not archive_hunt:
+            puzzle_data = await self.get_puzzle_data_from_channel(interaction.channel)
+            channel_id = puzzle_data.channel_id
+            assert channel_id == interaction.channel.id
+            channels = [channel_id]
+        else:
+            puzzles = await PuzzleDb.get_all(interaction.guild.id)
+            channels = [puzzle.channel_id for puzzle in puzzles]
+
+        await self._archive_channels_final(self.bot, channels, archive_channel_id)
+        await interaction.response.send_message(f"Archived {len(channels)} channels to <#{archive_channel_id}>")
+
+    async def _archive_channels_final(self, bot, source_channel_ids: list[int], archive_channel_id: int, dry_run: bool = False):
+        archive_channel = bot.get_channel(archive_channel_id)
+        if not archive_channel:
+            logger.error("Error: Archive channel not found.")
+            return
+
+        if dry_run:
+            logger.info("--- !!! DRY RUN ENABLED: No messages will be sent !!! ---")
+
+        # 1. Scan Archive Channel for existing records
+        logger.info("Scanning archive channel for previous records...")
+        existing_archives = set()
+        async for msg in archive_channel.history(limit=None):
+            if "--- 📂 **ARCHIVE START** ---" in msg.content:
+                try:
+                    # Extracts the ID from between the parentheses
+                    extracted_id = int(msg.content.split('id=')[1].split(')')[0])
+                    existing_archives.add(extracted_id)
+                except (IndexError, ValueError):
+                    continue
+
+        summary: list[str] = []
+
+        for channel_id in source_channel_ids:
+            # Check if already archived
+            if channel_id in existing_archives:
+                logger.info(f"Skipping ID {channel_id}: Already exists in archive.")
+                summary.append(f"ID {channel_id}: Skipped (Duplicate)")
+                continue
+
+            source_channel = bot.get_channel(channel_id)
+            if not source_channel:
+                logger.info(f"Skipping ID {channel_id}: Channel not found.")
+                summary.append(f"ID {channel_id}: Skipped (Not Found)")
+                continue
+
+            # 2. Count messages
+            count = 0
+            async for _ in source_channel.history(limit=None):
+                count += 1
+
+            if dry_run:
+                logger.info(f"[DRY RUN] Would archive #{source_channel.name} with {count} messages.")
+                summary.append(f"#{source_channel.name}: Ready ({count} messages)")
+                continue
+
+            # 3. Start Sentinel
+            await archive_channel.send(
+                f"--- 📂 **ARCHIVE START** ---\n"
+                f"**Channel:** #{source_channel.name} (category={source_channel.category} id={source_channel.id})\n"
+                f"**Message Count:** {count}\n"
+                f"----------------------------"
+            )
+
+            # 4. Copying Logic
+            async for message in source_channel.history(limit=None, oldest_first=True):
+                if not message.content and not message.attachments:
+                    continue
+
+                header = f"**{message.author.display_name}** [{message.created_at.strftime('%Y-%m-%d %H:%M')}]:\n"
+                full_content = (header + message.content)[:2000]
+
+                try:
+                    files = [await a.to_file() for a in message.attachments]
+                    await archive_channel.send(content=full_content, files=files)
+                    await asyncio.sleep(0.6) # Anti-spam buffer
+                except Exception:
+                    logger.exception(f"Error copying message in #{source_channel.name}")
+
+            # 5. End Sentinel
+            await archive_channel.send(
+                f"--- ✅ **ARCHIVE END: #{source_channel.name}** ---\n"
+                f"All {count} messages have been transferred."
+            )
+            summary.append(f"#{source_channel.name}: Archived ({count} messages)")
+
+        # Final Summary Report
+        logger.info("\n--- Execution Summary ---")
+        for item in summary:
+            logger.info(item)
 
 
 async def setup(bot):
