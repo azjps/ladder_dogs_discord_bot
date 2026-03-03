@@ -107,16 +107,16 @@ Now you can run the bot by running the following in a shell: `docker compose up`
 sudo yum install docker -y
 sudo systemctl start docker
 # Check docker-compose website for relevant release
-curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64 -o bin/docker-compose
-sudo ~/bin/docker-compose up
+# curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64 -o bin/docker-compose
+sudo docker-compose up
 ```
 
 To launch a postgres cli shell to see the state of the database:
 ```bash
 sudo docker ps
-sudo docker exec -it ladder_dogs_discord_bot-db-1 psql -U postgres
+sudo docker exec -it ladder_dogs_discord_bot_db_1 psql -U postgres
 # Dump contents of database to file
-sudo docker exec -it ladder_dogs_discord_bot-db-1 pg_dump -U postgres > ~/pg_dump.$(date +'%Y%m%d').sql
+sudo docker exec -it ladder_dogs_discord_bot_db_1 pg_dump -U postgres --data-only > ~/pg_dump.$(date +'%Y%m%d').sql
 ```
 
 To launch an interactive python shell with the same environment:
