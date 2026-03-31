@@ -1,12 +1,13 @@
-FROM python:3.10.13-alpine3.19
-ENV PYTHONUNBUFFERED 1
+#-------------------------------------------------------------------------------
+# Base image contains the core dependencies for running a server
+#-------------------------------------------------------------------------------
+FROM python:3.10.13-alpine3.19 AS base
+ENV PYTHONUNBUFFERED=1
 
 RUN apk add --no-cache \
     build-base \
-    cargo \
     postgresql-dev \
-    postgresql-libs \
-    rust
+    postgresql-libs
 
 RUN mkdir /code
 WORKDIR /code
@@ -15,7 +16,23 @@ RUN pip install pipenv
 
 COPY Pipfile Pipfile
 COPY Pipfile.lock Pipfile.lock
-RUN pipenv install --system
+
+#-------------------------------------------------------------------------------
+# Devtools contains linters or autoformatters which aren't needed in production
+#-------------------------------------------------------------------------------
+FROM base AS devtools
+
+RUN apk add --no-cache \
+    git
+
+RUN pipenv install --system --dev
+
+CMD ["/bin/echo", "No default command"]
+
+#-------------------------------------------------------------------------------
+# The server image installs the code, locked dependencies, then runs the bot.
+#-------------------------------------------------------------------------------
+FROM base AS server 
 
 COPY ./docker_entrypoint.sh docker_entrypoint.sh
 COPY ./alembic.ini alembic.ini
@@ -23,5 +40,8 @@ COPY ./run.py run.py
 COPY ./alembic alembic
 COPY ./bot bot
 
-CMD ./docker_entrypoint.sh
+RUN pipenv install --system
+
+CMD ["./docker_entrypoint.sh"]
+
 
